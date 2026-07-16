@@ -28,9 +28,11 @@ export function DashboardHome() {
   const [toDate, setToDate] = useState(() => dateInputValue(new Date()));
 
   useEffect(() => {
+    setLoading(true);
+    setError(null);
     Promise.all([
       adminApi.listCustomers(),
-      adminApi.listPickups(),
+      adminApi.listPickups({ from: fromDate, to: toDate }),
       adminApi.listSettlements().catch(() => [] as Transaction[]),
     ])
       .then(([c, p, s]) => {
@@ -40,7 +42,7 @@ export function DashboardHome() {
       })
       .catch(() => setError("Could not load dashboard data. Please try again."))
       .finally(() => setLoading(false));
-  }, []);
+  }, [fromDate, toDate]);
 
   // Map customerId -> city, and the sorted list of distinct cities (always global).
   const { cityByCustomer, cities } = useMemo(() => {

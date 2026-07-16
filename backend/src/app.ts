@@ -1,5 +1,6 @@
 import express from "express";
 import cors from "cors";
+import compression from "compression";
 import { authRouter } from "./modules/auth/auth.routes";
 import { adminRouter } from "./modules/admin/admin.routes";
 import { riderRouter } from "./modules/rider/rider.routes";
@@ -10,6 +11,7 @@ import { errorHandler } from "./middleware/errorHandler";
 export const app = express();
 
 app.use(cors());
+app.use(compression());
 app.use(express.json());
 
 app.get("/api/health", (_req, res) => res.json({ ok: true }));
