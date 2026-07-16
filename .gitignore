@@ -1,0 +1,12 @@
+node_modules/
+dist/
+build/
+.tools/
+.agents/
+.claude/
+.env
+.env.*.local
+backend/prisma/*.csv
+backend/prisma/*.xlsx
+*.log
+.DS_Store
