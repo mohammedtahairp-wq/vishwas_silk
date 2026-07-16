@@ -208,8 +208,8 @@ export function DashboardHome() {
             )}
           />
         </Card>
-        <Card title="Customers by city" subtitle="All cities">
-          <BarList data={stats.customersByCity} highlight={city} emptyLabel="No customers yet." />
+        <Card title="Volume by product" subtitle={`Total kilograms · ${scope}`}>
+          <BarList data={stats.byProduct} unit="kg" emptyLabel="No pickups recorded yet." />
         </Card>
       </div>
 
@@ -227,8 +227,8 @@ export function DashboardHome() {
 
       {/* Product + rider breakdowns (scoped) */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <Card title="Volume by product" subtitle={`Total kilograms · ${scope}`}>
-          <BarList data={stats.byProduct} unit="kg" emptyLabel="No pickups recorded yet." />
+        <Card title="Customers by city" subtitle="All cities">
+          <BarList data={stats.customersByCity} highlight={city} emptyLabel="No customers yet." />
         </Card>
         <Card title="Top riders" subtitle={`By volume · ${scope}`}>
           <BarList data={stats.topRiders} unit="kg" emptyLabel="No rider activity yet." />
