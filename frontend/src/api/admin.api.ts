@@ -9,12 +9,12 @@ export const adminApi = {
     apiClient.put<City>(`/admin/cities/${id}`, data).then((r) => r.data),
   deleteCity: (id: string) => apiClient.delete(`/admin/cities/${id}`).then((r) => r.data),
 
-  createCustomer: (data: { name: string; phone: string; address: string; villageArea?: string }) =>
+  createCustomer: (data: { name: string; phone: string; address: string; villageArea?: string; products?: { productId: string; pricePerKg: number; effectiveFrom?: string }[] }) =>
     apiClient.post<Customer>("/admin/customers", data).then((r) => r.data),
   listCustomers: (params?: { rider_id?: string; status?: string }) =>
     apiClient.get<Customer[]>("/admin/customers", { params }).then((r) => r.data),
   getCustomer: (id: string) => apiClient.get<Customer>(`/admin/customers/${id}`).then((r) => r.data),
-  updateCustomer: (id: string, data: Partial<Customer>) =>
+  updateCustomer: (id: string, data: Partial<Customer> & { products?: { productId: string; pricePerKg: number; effectiveFrom?: string }[] }) =>
     apiClient.put<Customer>(`/admin/customers/${id}`, data).then((r) => r.data),
   deleteCustomer: (id: string) => apiClient.delete(`/admin/customers/${id}`).then((r) => r.data),
   assignRider: (id: string, riderId: string | null) =>

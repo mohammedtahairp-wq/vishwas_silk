@@ -3,7 +3,7 @@ import type { FormEvent } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { adminApi } from "../../api/admin.api";
 import { apiErrorMessage } from "../../api/client";
-import type { City, Customer, Rider } from "../../api/types";
+import type { City, Customer, Product, Rider } from "../../api/types";
 import { CitySelect } from "../../components/CitySelect";
 import { Modal } from "../../components/Modal";
 
@@ -13,6 +13,7 @@ export function CustomersListPage() {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [cities, setCities] = useState<City[]>([]);
   const [riders, setRiders] = useState<Rider[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
@@ -22,6 +23,7 @@ export function CustomersListPage() {
   const [address, setAddress] = useState("");
   const [villageArea, setVillageArea] = useState("");
   const [assignedRiderId, setAssignedRiderId] = useState("");
+  const [productPrices, setProductPrices] = useState<{ productId: string; pricePerKg: string }[]>([]);
   const [submitting, setSubmitting] = useState(false);
 
   const [editing, setEditing] = useState<Customer | null>(null);
@@ -38,6 +40,7 @@ export function CustomersListPage() {
   useEffect(() => {
     load();
     adminApi.listCities().then(setCities);
+    adminApi.listProducts().then(setProducts);
     adminApi.listRiders().then((rows) => setRiders(rows.filter((rider) => rider.status === "active")));
   }, []);
 
@@ -57,13 +60,23 @@ export function CustomersListPage() {
     setError(null);
     setSubmitting(true);
     try {
-      const customer = await adminApi.createCustomer({ name, phone, address, villageArea: villageArea || undefined });
+      const validProducts = productPrices.filter((p) => p.productId && p.pricePerKg);
+      const customer = await adminApi.createCustomer({
+        name,
+        phone,
+        address,
+        villageArea: villageArea || undefined,
+        products: validProducts.length > 0
+          ? validProducts.map((p) => ({ productId: p.productId, pricePerKg: Number(p.pricePerKg) }))
+          : undefined,
+      });
       if (assignedRiderId) await adminApi.assignRider(customer.id, assignedRiderId);
       setName("");
       setPhone("");
       setAddress("");
       setVillageArea("");
       setAssignedRiderId("");
+      setProductPrices([]);
       await load();
     } catch (err) {
       setError(apiErrorMessage(err, "Could not create customer — check the fields and try again"));
@@ -120,7 +133,8 @@ export function CustomersListPage() {
           </label>
           </div>
         </div>
-        <form onSubmit={handleCreate} className="bg-white p-4 rounded-lg shadow-sm border border-gray-200 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-6 gap-3 items-end">
+        <form onSubmit={handleCreate} className="bg-white p-4 rounded-lg shadow-sm border border-gray-200 space-y-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-6 gap-3 items-end">
           <div className="md:col-span-1">
             <label className="block text-xs font-medium text-gray-600 mb-1">Name</label>
             <input className="w-full border border-gray-300 rounded px-2 py-1.5" value={name} onChange={(e) => setName(e.target.value)} required />
@@ -144,6 +158,29 @@ export function CustomersListPage() {
               {riders.map((rider) => <option key={rider.id} value={rider.id}>{rider.name}</option>)}
             </select>
           </div>
+          </div>
+          <div className="border-t border-gray-100 pt-3">
+            <div className="flex items-center justify-between mb-2">
+              <label className="text-xs font-semibold text-gray-700">Products &amp; Rates (optional)</label>
+              <button type="button" onClick={() => setProductPrices([...productPrices, { productId: "", pricePerKg: "" }])} className="text-xs text-indigo-600 hover:underline">+ Add product</button>
+            </div>
+            {productPrices.length === 0 && <p className="text-xs text-gray-400">No products added. You can set them later from the customer detail page.</p>}
+            {productPrices.map((row, idx) => (
+              <div key={idx} className="flex items-center gap-2 mb-1">
+                <select className="flex-1 rounded border border-gray-300 px-2 py-1.5 text-sm" value={row.productId} onChange={(e) => {
+                  const next = [...productPrices]; next[idx] = { ...next[idx], productId: e.target.value }; setProductPrices(next);
+                }} required>
+                  <option value="">Select product</option>
+                  {products.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                </select>
+                <input type="number" min="0.01" step="0.01" placeholder="Price/kg" className="w-28 rounded border border-gray-300 px-2 py-1.5 text-sm" value={row.pricePerKg} onChange={(e) => {
+                  const next = [...productPrices]; next[idx] = { ...next[idx], pricePerKg: e.target.value }; setProductPrices(next);
+                }} required />
+                <button type="button" onClick={() => setProductPrices(productPrices.filter((_, i) => i !== idx))} className="text-red-500 hover:text-red-700 text-xs">Remove</button>
+              </div>
+            ))}
+          </div>
+          <div>
           <button
             type="submit"
             disabled={submitting}
@@ -151,6 +188,7 @@ export function CustomersListPage() {
           >
             Add customer
           </button>
+          </div>
         </form>
         {error && <p className="text-sm text-red-600 mt-2">{error}</p>}
       </div>
@@ -223,6 +261,7 @@ export function CustomersListPage() {
         <EditCustomerModal
           customer={editing}
           cities={cities}
+          products={products}
           onClose={() => setEditing(null)}
           onSaved={async () => {
             setEditing(null);
@@ -234,21 +273,41 @@ export function CustomersListPage() {
   );
 }
 
-function EditCustomerModal({ customer, cities, onClose, onSaved }: { customer: Customer; cities: City[]; onClose: () => void; onSaved: () => void }) {
+function EditCustomerModal({ customer, cities, products, onClose, onSaved }: { customer: Customer; cities: City[]; products: Product[]; onClose: () => void; onSaved: () => void }) {
   const [name, setName] = useState(customer.name);
   const [phone, setPhone] = useState(customer.phone);
   const [address, setAddress] = useState(customer.address);
   const [villageArea, setVillageArea] = useState(customer.villageArea ?? "");
   const [status, setStatus] = useState<Customer["status"]>(customer.status);
+  const [productPrices, setProductPrices] = useState<{ productId: string; pricePerKg: string }[]>([]);
+  const [loadedPrices, setLoadedPrices] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    adminApi.priceHistory(customer.id).then((prices) => {
+      const latest = new Map<string, { productId: string; pricePerKg: string }>();
+      for (const p of prices) {
+        if (!latest.has(p.productId)) latest.set(p.productId, { productId: p.productId, pricePerKg: String(p.pricePerKg) });
+      }
+      setProductPrices([...latest.values()]);
+      setLoadedPrices(true);
+    }).catch(() => setLoadedPrices(true));
+  }, [customer.id]);
 
   async function save(e: FormEvent) {
     e.preventDefault();
     setSaving(true);
     setError(null);
     try {
-      await adminApi.updateCustomer(customer.id, { name, phone, address, villageArea: villageArea || undefined });
+      const validProducts = productPrices.filter((p) => p.productId && p.pricePerKg);
+      await adminApi.updateCustomer(customer.id, {
+        name,
+        phone,
+        address,
+        villageArea: villageArea || undefined,
+        products: validProducts.map((p) => ({ productId: p.productId, pricePerKg: Number(p.pricePerKg) })),
+      });
       if (status !== customer.status) {
         await adminApi.setCustomerStatus(customer.id, status);
       }
@@ -285,6 +344,28 @@ function EditCustomerModal({ customer, cities, onClose, onSaved }: { customer: C
             <option value="inactive">Inactive</option>
           </select>
         </Field>
+        <div className="border-t border-gray-100 pt-3">
+          <div className="flex items-center justify-between mb-2">
+            <label className="text-xs font-semibold text-gray-700">Products &amp; Rates</label>
+            <button type="button" onClick={() => setProductPrices([...productPrices, { productId: "", pricePerKg: "" }])} className="text-xs text-indigo-600 hover:underline">+ Add product</button>
+          </div>
+          {!loadedPrices && <p className="text-xs text-gray-400">Loading prices...</p>}
+          {loadedPrices && productPrices.length === 0 && <p className="text-xs text-gray-400">No product rates set.</p>}
+          {productPrices.map((row, idx) => (
+            <div key={idx} className="flex items-center gap-2 mb-1">
+              <select className="flex-1 rounded border border-gray-300 px-2 py-1.5 text-sm" value={row.productId} onChange={(e) => {
+                const next = [...productPrices]; next[idx] = { ...next[idx], productId: e.target.value }; setProductPrices(next);
+              }} required>
+                <option value="">Select product</option>
+                {products.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+              </select>
+              <input type="number" min="0.01" step="0.01" placeholder="Price/kg" className="w-28 rounded border border-gray-300 px-2 py-1.5 text-sm" value={row.pricePerKg} onChange={(e) => {
+                const next = [...productPrices]; next[idx] = { ...next[idx], pricePerKg: e.target.value }; setProductPrices(next);
+              }} required />
+              <button type="button" onClick={() => setProductPrices(productPrices.filter((_, i) => i !== idx))} className="text-red-500 hover:text-red-700 text-xs">Remove</button>
+            </div>
+          ))}
+        </div>
         {error && <p className="text-sm text-red-600">{error}</p>}
         <div className="flex justify-end gap-2 pt-2">
           <button type="button" onClick={onClose} className="rounded px-4 py-1.5 text-gray-600 hover:bg-gray-100">

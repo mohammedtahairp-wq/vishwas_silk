@@ -1,12 +1,19 @@
 import { prisma } from "../../../lib/prisma";
 import { ConflictError, ForbiddenError, NotFoundError } from "../../../lib/errors";
 
+interface ProductPriceInput {
+  productId: string;
+  pricePerKg: number;
+  effectiveFrom?: string;
+}
+
 interface CreateCustomerInput {
   name: string;
   phone: string;
   address: string;
   villageArea?: string;
   createdById: string;
+  products?: ProductPriceInput[];
 }
 
 interface UpdateCustomerInput {
@@ -14,6 +21,8 @@ interface UpdateCustomerInput {
   phone?: string;
   address?: string;
   villageArea?: string;
+  products?: ProductPriceInput[];
+  createdById?: string;
 }
 
 interface ListCustomersFilter {
@@ -33,15 +42,33 @@ async function generateSerialNumber(city?: string | null): Promise<string> {
 
 export async function createCustomer(input: CreateCustomerInput) {
   const serialNumber = await generateSerialNumber(input.villageArea);
-  return prisma.customer.create({
-    data: {
-      serialNumber,
-      name: input.name,
-      phone: input.phone,
-      address: input.address,
-      villageArea: input.villageArea,
-      createdById: input.createdById,
-    },
+  const today = new Date().toISOString().slice(0, 10);
+
+  return prisma.$transaction(async (tx) => {
+    const customer = await tx.customer.create({
+      data: {
+        serialNumber,
+        name: input.name,
+        phone: input.phone,
+        address: input.address,
+        villageArea: input.villageArea,
+        createdById: input.createdById,
+      },
+    });
+
+    if (input.products && input.products.length > 0) {
+      await tx.customerProductPrice.createMany({
+        data: input.products.map((p) => ({
+          customerId: customer.id,
+          productId: p.productId,
+          pricePerKg: p.pricePerKg,
+          effectiveFrom: p.effectiveFrom ? new Date(p.effectiveFrom) : new Date(today),
+          createdById: input.createdById,
+        })),
+      });
+    }
+
+    return customer;
   });
 }
 
@@ -78,7 +105,27 @@ export async function getCustomerById(id: string) {
 
 export async function updateCustomer(id: string, input: UpdateCustomerInput) {
   await getCustomerById(id);
-  return prisma.customer.update({ where: { id }, data: input });
+  const { products, ...fields } = input;
+
+  const customer = await prisma.customer.update({ where: { id }, data: fields });
+
+  if (products) {
+    const today = new Date().toISOString().slice(0, 10);
+    await prisma.customerProductPrice.deleteMany({ where: { customerId: id } });
+    if (products.length > 0) {
+      await prisma.customerProductPrice.createMany({
+        data: products.map((p) => ({
+          customerId: id,
+          productId: p.productId,
+          pricePerKg: p.pricePerKg,
+          effectiveFrom: p.effectiveFrom ? new Date(p.effectiveFrom) : new Date(today),
+          createdById: input.createdById ?? customer.createdById,
+        })),
+      });
+    }
+  }
+
+  return customer;
 }
 
 export async function deleteCustomer(id: string) {

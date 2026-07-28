@@ -2,11 +2,18 @@ import { Request, Response } from "express";
 import { z } from "zod";
 import * as customersService from "./customers.service";
 
+const productPriceSchema = z.object({
+  productId: z.string().uuid(),
+  pricePerKg: z.number().positive(),
+  effectiveFrom: z.string().optional(),
+});
+
 const createSchema = z.object({
   name: z.string().min(1),
   phone: z.string().min(6),
   address: z.string().min(1),
   villageArea: z.string().optional(),
+  products: z.array(productPriceSchema).optional(),
 });
 
 const updateSchema = createSchema.partial();
@@ -44,7 +51,7 @@ export async function getCustomerHandler(req: Request, res: Response) {
 
 export async function updateCustomerHandler(req: Request, res: Response) {
   const body = updateSchema.parse(req.body);
-  const customer = await customersService.updateCustomer(req.params.id, body);
+  const customer = await customersService.updateCustomer(req.params.id, { ...body, createdById: req.user!.id });
   res.json(customer);
 }
 
