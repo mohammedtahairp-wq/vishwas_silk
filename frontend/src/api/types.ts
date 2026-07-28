@@ -55,7 +55,10 @@ export interface CustomerProduct {
   effectiveFrom: string;
 }
 
-export interface PickupAdmin {
+export interface CreateCustomerResult {
+  customer: Customer;
+  username: string | null;
+}
   id: string;
   customerId: string;
   riderId: string;

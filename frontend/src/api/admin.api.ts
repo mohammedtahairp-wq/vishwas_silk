@@ -1,5 +1,5 @@
 import { apiClient } from "./client";
-import type { City, CreateRiderResult, Customer, PickupAdmin, Price, Product, Rider, Transaction } from "./types";
+import type { City, CreateCustomerResult, CreateRiderResult, Customer, PickupAdmin, Price, Product, Rider, Transaction } from "./types";
 
 export const adminApi = {
   // Cities
@@ -9,8 +9,8 @@ export const adminApi = {
     apiClient.put<City>(`/admin/cities/${id}`, data).then((r) => r.data),
   deleteCity: (id: string) => apiClient.delete(`/admin/cities/${id}`).then((r) => r.data),
 
-  createCustomer: (data: { name: string; phone: string; address: string; villageArea?: string; products?: { productId: string; pricePerKg: number; effectiveFrom?: string }[] }) =>
-    apiClient.post<Customer>("/admin/customers", data).then((r) => r.data),
+  createCustomer: (data: { name: string; phone: string; address?: string; villageArea?: string; username?: string; password?: string; products?: { productId: string; pricePerKg: number; effectiveFrom?: string }[] }) =>
+    apiClient.post<CreateCustomerResult>("/admin/customers", data).then((r) => r.data),
   listCustomers: (params?: { rider_id?: string; status?: string }) =>
     apiClient.get<Customer[]>("/admin/customers", { params }).then((r) => r.data),
   getCustomer: (id: string) => apiClient.get<Customer>(`/admin/customers/${id}`).then((r) => r.data),

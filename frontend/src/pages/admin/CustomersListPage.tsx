@@ -23,8 +23,11 @@ export function CustomersListPage() {
   const [address, setAddress] = useState("");
   const [villageArea, setVillageArea] = useState("");
   const [assignedRiderId, setAssignedRiderId] = useState("");
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
   const [productPrices, setProductPrices] = useState<{ productId: string; pricePerKg: string }[]>([]);
   const [submitting, setSubmitting] = useState(false);
+  const [createdInfo, setCreatedInfo] = useState<string | null>(null);
 
   const [editing, setEditing] = useState<Customer | null>(null);
 
@@ -58,24 +61,30 @@ export function CustomersListPage() {
   async function handleCreate(e: FormEvent) {
     e.preventDefault();
     setError(null);
+    setCreatedInfo(null);
     setSubmitting(true);
     try {
       const validProducts = productPrices.filter((p) => p.productId && p.pricePerKg);
-      const customer = await adminApi.createCustomer({
+      const result = await adminApi.createCustomer({
         name,
         phone,
-        address,
+        address: address || undefined,
         villageArea: villageArea || undefined,
+        username: username || undefined,
+        password: password || undefined,
         products: validProducts.length > 0
           ? validProducts.map((p) => ({ productId: p.productId, pricePerKg: Number(p.pricePerKg) }))
           : undefined,
       });
-      if (assignedRiderId) await adminApi.assignRider(customer.id, assignedRiderId);
+      if (assignedRiderId) await adminApi.assignRider(result.customer.id, assignedRiderId);
+      setCreatedInfo(`"${result.customer.name}" created${result.username ? ` — username: ${result.username}` : ""}`);
       setName("");
       setPhone("");
       setAddress("");
       setVillageArea("");
       setAssignedRiderId("");
+      setUsername("");
+      setPassword("");
       setProductPrices([]);
       await load();
     } catch (err) {
@@ -144,8 +153,8 @@ export function CustomersListPage() {
             <input className="w-full border border-gray-300 rounded px-2 py-1.5" value={phone} onChange={(e) => setPhone(e.target.value)} required />
           </div>
           <div className="md:col-span-1">
-            <label className="block text-xs font-medium text-gray-600 mb-1">Address</label>
-            <input className="w-full border border-gray-300 rounded px-2 py-1.5" value={address} onChange={(e) => setAddress(e.target.value)} required />
+            <label className="block text-xs font-medium text-gray-600 mb-1">Address <span className="text-gray-400">(optional)</span></label>
+            <input className="w-full border border-gray-300 rounded px-2 py-1.5" value={address} onChange={(e) => setAddress(e.target.value)} />
           </div>
           <div className="md:col-span-1">
             <label className="block text-xs font-medium text-gray-600 mb-1">City</label>
@@ -157,6 +166,14 @@ export function CustomersListPage() {
               <option value="">Unassigned</option>
               {riders.map((rider) => <option key={rider.id} value={rider.id}>{rider.name}</option>)}
             </select>
+          </div>
+          <div className="md:col-span-1">
+            <label className="block text-xs font-medium text-gray-600 mb-1">Login username <span className="text-gray-400">(optional)</span></label>
+            <input className="w-full border border-gray-300 rounded px-2 py-1.5" value={username} onChange={(e) => setUsername(e.target.value)} />
+          </div>
+          <div className="md:col-span-1">
+            <label className="block text-xs font-medium text-gray-600 mb-1">Login password <span className="text-gray-400">(optional)</span></label>
+            <input type="password" className="w-full border border-gray-300 rounded px-2 py-1.5" value={password} onChange={(e) => setPassword(e.target.value)} />
           </div>
           </div>
           <div className="border-t border-gray-100 pt-3">
@@ -191,6 +208,7 @@ export function CustomersListPage() {
           </div>
         </form>
         {error && <p className="text-sm text-red-600 mt-2">{error}</p>}
+        {createdInfo && <p className="text-sm text-green-600 mt-2">{createdInfo}</p>}
       </div>
 
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-x-auto">

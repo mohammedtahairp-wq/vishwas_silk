@@ -1,5 +1,6 @@
 import { prisma } from "../../../lib/prisma";
 import { ConflictError, ForbiddenError, NotFoundError } from "../../../lib/errors";
+import bcrypt from "bcrypt";
 
 interface ProductPriceInput {
   productId: string;
@@ -10,9 +11,11 @@ interface ProductPriceInput {
 interface CreateCustomerInput {
   name: string;
   phone: string;
-  address: string;
+  address?: string;
   villageArea?: string;
   createdById: string;
+  username?: string;
+  password?: string;
   products?: ProductPriceInput[];
 }
 
@@ -44,6 +47,13 @@ export async function createCustomer(input: CreateCustomerInput) {
   const serialNumber = await generateSerialNumber(input.villageArea);
   const today = new Date().toISOString().slice(0, 10);
 
+  let username: string | undefined;
+  if (input.username && input.password) {
+    username = input.username.trim().toLowerCase();
+    const existingUser = await prisma.user.findUnique({ where: { username } });
+    if (existingUser) throw new ConflictError("That username is already in use");
+  }
+
   return prisma.$transaction(async (tx) => {
     const customer = await tx.customer.create({
       data: {
@@ -68,7 +78,14 @@ export async function createCustomer(input: CreateCustomerInput) {
       });
     }
 
-    return customer;
+    if (username && input.password) {
+      const passwordHash = await bcrypt.hash(input.password, 12);
+      await tx.user.create({
+        data: { username, passwordHash, role: "customer", linkedId: customer.id },
+      });
+    }
+
+    return { customer, username };
   });
 }
 

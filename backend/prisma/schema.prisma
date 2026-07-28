@@ -52,7 +52,7 @@ model Customer {
   serialNumber    String?  @unique @map("serial_number")
   name            String
   phone           String   @unique
-  address         String
+  address         String?
   villageArea     String?  @map("village_area")
   assignedRiderId String?  @map("assigned_rider_id")
   status          Status   @default(active)

@@ -11,8 +11,10 @@ const productPriceSchema = z.object({
 const createSchema = z.object({
   name: z.string().min(1),
   phone: z.string().min(6),
-  address: z.string().min(1),
+  address: z.string().optional(),
   villageArea: z.string().optional(),
+  username: z.string().min(3).max(50).regex(/^[a-zA-Z0-9._-]+$/, "Username may only contain letters, numbers, dots, underscores and hyphens").optional(),
+  password: z.string().min(8, "Password must be at least 8 characters").optional(),
   products: z.array(productPriceSchema).optional(),
 });
 
