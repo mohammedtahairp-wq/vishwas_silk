@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { motion } from "framer-motion";
 import { adminApi } from "../../api/admin.api";
 import type { Customer, PickupAdmin, Transaction } from "../../api/types";
 import { BarList, ColumnChart, Donut } from "./dashboard/charts";
@@ -16,6 +17,16 @@ const dateInputValue = (date: Date) => {
   return `${year}-${month}-${day}`;
 };
 
+const container = {
+  hidden: { opacity: 0 },
+  show: { opacity: 1, transition: { staggerChildren: 0.06 } },
+};
+
+const item = {
+  hidden: { opacity: 0, y: 16 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.4, ease: [0.4, 0, 0.2, 1] as const } },
+};
+
 export function DashboardHome() {
   const navigate = useNavigate();
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -23,7 +34,7 @@ export function DashboardHome() {
   const [settlements, setSettlements] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [city, setCity] = useState(""); // "" = all cities
+  const [city, setCity] = useState("");
   const [fromDate, setFromDate] = useState(() => dateInputValue(new Date(new Date().getFullYear(), new Date().getMonth(), 1)));
   const [toDate, setToDate] = useState(() => dateInputValue(new Date()));
 
@@ -44,7 +55,6 @@ export function DashboardHome() {
       .finally(() => setLoading(false));
   }, [fromDate, toDate]);
 
-  // Map customerId -> city, and the sorted list of distinct cities (always global).
   const { cityByCustomer, cities } = useMemo(() => {
     const map = new Map<string, string>();
     const set = new Set<string>();
@@ -58,7 +68,6 @@ export function DashboardHome() {
   }, [customers]);
 
   const stats = useMemo(() => {
-    // Apply the city filter to every entity via the customer -> city map.
     const inCity = (custId: string | undefined) => !city || (custId != null && cityByCustomer.get(custId) === city);
     const fCustomers = customers.filter((c) => inCity(c.id));
     const inDateRange = (iso: string) => {
@@ -83,7 +92,6 @@ export function DashboardHome() {
     const pending = fSettlements.filter((s) => s.status === "pending");
     const pendingAmount = pending.reduce((sum, s) => sum + Number(s.totalAmount || 0), 0);
 
-    // Revenue by month for the last 6 months (respects city filter)
     const buckets: { key: string; label: string; value: number }[] = [];
     for (let i = 5; i >= 0; i--) {
       const d = new Date(thisYear, thisMonth - i, 1);
@@ -96,7 +104,6 @@ export function DashboardHome() {
       if (bucket) bucket.value += Number(p.amount || 0);
     }
 
-    // Kg by product (respects city filter)
     const productMap = new Map<string, number>();
     for (const p of fPickups) {
       const label = p.product?.name ?? "Unknown";
@@ -104,7 +111,6 @@ export function DashboardHome() {
     }
     const byProduct = [...productMap].map(([label, value]) => ({ label, value })).sort((a, b) => b.value - a.value);
 
-    // Top riders by kg (respects city filter)
     const riderMap = new Map<string, number>();
     for (const p of fPickups) {
       const label = p.rider?.name ?? "Unassigned";
@@ -112,7 +118,6 @@ export function DashboardHome() {
     }
     const topRiders = [...riderMap].map(([label, value]) => ({ label, value })).sort((a, b) => b.value - a.value).slice(0, 6);
 
-    // ── City breakdowns: ALWAYS across all cities (comparison view, ignores filter) ──
     const cityRevenue = new Map<string, number>();
     const cityCustomers = new Map<string, number>();
     for (const ct of cities) {
@@ -147,14 +152,14 @@ export function DashboardHome() {
     return (
       <div className="space-y-6">
         <Header cities={[]} city="" onCity={() => {}} fromDate={fromDate} toDate={toDate} onFromDate={setFromDate} onToDate={setToDate} />
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4">
           {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="h-28 animate-pulse rounded-xl border border-gray-200 bg-white" />
+            <div key={i} className="h-32 rounded-2xl border border-white/60 bg-white/50" style={{ animation: "shimmer 2s infinite", backgroundImage: "linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.6) 50%, rgba(255,255,255,0) 100%)", backgroundSize: "200% 100%" }} />
           ))}
         </div>
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-          <div className="h-80 animate-pulse rounded-xl border border-gray-200 bg-white lg:col-span-2" />
-          <div className="h-80 animate-pulse rounded-xl border border-gray-200 bg-white" />
+        <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
+          <div className="h-80 rounded-2xl border border-white/60 bg-white/50 lg:col-span-2" style={{ animation: "shimmer 2s infinite", backgroundImage: "linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.6) 50%, rgba(255,255,255,0) 100%)", backgroundSize: "200% 100%" }} />
+          <div className="h-80 rounded-2xl border border-white/60 bg-white/50" style={{ animation: "shimmer 2s infinite", backgroundImage: "linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.6) 50%, rgba(255,255,255,0) 100%)", backgroundSize: "200% 100%" }} />
         </div>
       </div>
     );
@@ -164,7 +169,20 @@ export function DashboardHome() {
     return (
       <div className="space-y-6">
         <Header cities={[]} city="" onCity={() => {}} fromDate={fromDate} toDate={toDate} onFromDate={setFromDate} onToDate={setToDate} />
-        <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">{error}</div>
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="rounded-2xl border border-red-200 bg-gradient-to-r from-red-50 to-rose-50 p-6 text-sm text-red-700 shadow-sm"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center">
+              <svg className="w-4 h-4 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+              </svg>
+            </div>
+            {error}
+          </div>
+        </motion.div>
       </div>
     );
   }
@@ -184,56 +202,105 @@ export function DashboardHome() {
         onToDate={setToDate}
       />
 
-      {/* KPI tiles — scoped to the selected city */}
-      <div>
-        <p className="mb-2 text-xs font-medium uppercase tracking-wide text-gray-400">Showing: {scope} · {period}</p>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          <Stat label="Revenue in period" value={inrCurrency(stats.revenueThisMonth)} hint={`${Math.round(stats.kgThisMonth)} kg collected`} />
-          <Stat label="Pickups in period" value={String(stats.pickupsThisMonth)} hint="across all riders" />
-          <Stat label="Customers" value={String(stats.totalCustomers)} hint={`${stats.activeCustomers} active`} />
-          <Stat label="Pending settlements" value={inrCurrency(stats.pendingAmount)} hint={`${stats.pendingCount} awaiting payment`} accent={stats.pendingCount > 0} />
-        </div>
-      </div>
-
-      {/* City comparison — always across all cities */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <Card title="Revenue by city" subtitle={`Selected period · all cities`}>
-          <BarList
-            data={stats.revenueByCity}
-            format={inrCurrency}
-            highlight={city}
-            emptyLabel="No revenue recorded yet."
-            onItemClick={(cityName) => navigate(
-              `/admin/customer-accounts?city=${encodeURIComponent(cityName)}&from=${fromDate}&to=${toDate}`,
-            )}
-          />
-        </Card>
-        <Card title="Volume by product" subtitle={`Total kilograms · ${scope}`}>
-          <BarList data={stats.byProduct} unit="kg" emptyLabel="No pickups recorded yet." />
-        </Card>
-      </div>
-
-      {/* Revenue trend + customer split (scoped) */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        <Card className="lg:col-span-2" title="Revenue trend" subtitle={`Last 6 months · ${scope}`}>
-          <ColumnChart data={stats.revenueByMonth} valueFormat={(n) => (n >= 1000 ? `${Math.round(n / 1000)}k` : String(Math.round(n)))} prefix="₹" />
-        </Card>
-        <Card title="Active customers" subtitle={`Share of ${scope}`}>
-          <div className="flex h-full items-center justify-center py-4">
-            <Donut value={stats.activeCustomers} total={stats.totalCustomers} label="Active" />
+      <motion.div variants={container} initial="hidden" animate="show">
+        {/* KPI tiles */}
+        <motion.div variants={item} className="mb-6">
+          <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-400">
+            Showing: {scope} · {period}
+          </p>
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4">
+            <KpiCard
+              label="Revenue"
+              value={inrCurrency(stats.revenueThisMonth)}
+              hint={`${Math.round(stats.kgThisMonth)} kg collected`}
+              icon={
+                <div className="w-11 h-11 rounded-xl flex items-center justify-center" style={{ background: "linear-gradient(135deg, #4f46e5, #7c3aed)" }}>
+                  <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+              }
+            />
+            <KpiCard
+              label="Pickups"
+              value={String(stats.pickupsThisMonth)}
+              hint="across all riders"
+              icon={
+                <div className="w-11 h-11 rounded-xl flex items-center justify-center" style={{ background: "linear-gradient(135deg, #06b6d4, #3b82f6)" }}>
+                  <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                  </svg>
+                </div>
+              }
+            />
+            <KpiCard
+              label="Customers"
+              value={String(stats.totalCustomers)}
+              hint={`${stats.activeCustomers} active`}
+              icon={
+                <div className="w-11 h-11 rounded-xl flex items-center justify-center" style={{ background: "linear-gradient(135deg, #10b981, #059669)" }}>
+                  <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                  </svg>
+                </div>
+              }
+            />
+            <KpiCard
+              label="Pending settlements"
+              value={inrCurrency(stats.pendingAmount)}
+              hint={`${stats.pendingCount} awaiting payment`}
+              accent={stats.pendingCount > 0}
+              icon={
+                <div className={`w-11 h-11 rounded-xl flex items-center justify-center ${stats.pendingCount > 0 ? "" : "opacity-60"}`} style={{ background: stats.pendingCount > 0 ? "linear-gradient(135deg, #f97316, #ef4444)" : "linear-gradient(135deg, #94a3b8, #64748b)" }}>
+                  <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+              }
+            />
           </div>
-        </Card>
-      </div>
+        </motion.div>
 
-      {/* Product + rider breakdowns (scoped) */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <Card title="Customers by city" subtitle="All cities">
-          <BarList data={stats.customersByCity} highlight={city} emptyLabel="No customers yet." />
-        </Card>
-        <Card title="Top riders" subtitle={`By volume · ${scope}`}>
-          <BarList data={stats.topRiders} unit="kg" emptyLabel="No rider activity yet." />
-        </Card>
-      </div>
+        {/* City comparison */}
+        <motion.div variants={item} className="grid grid-cols-1 gap-5 lg:grid-cols-2 mb-6">
+          <Card title="Revenue by city" subtitle={`Selected period · all cities`}>
+            <BarList
+              data={stats.revenueByCity}
+              format={inrCurrency}
+              highlight={city}
+              emptyLabel="No revenue recorded yet."
+              onItemClick={(cityName) => navigate(
+                `/admin/customer-accounts?city=${encodeURIComponent(cityName)}&from=${fromDate}&to=${toDate}`,
+              )}
+            />
+          </Card>
+          <Card title="Volume by product" subtitle={`Total kilograms · ${scope}`}>
+            <BarList data={stats.byProduct} unit="kg" emptyLabel="No pickups recorded yet." />
+          </Card>
+        </motion.div>
+
+        {/* Revenue trend + customer split */}
+        <motion.div variants={item} className="grid grid-cols-1 gap-5 lg:grid-cols-3 mb-6">
+          <Card className="lg:col-span-2" title="Revenue trend" subtitle={`Last 6 months · ${scope}`}>
+            <ColumnChart data={stats.revenueByMonth} valueFormat={(n) => (n >= 1000 ? `${Math.round(n / 1000)}k` : String(Math.round(n)))} prefix="₹" />
+          </Card>
+          <Card title="Active customers" subtitle={`Share of ${scope}`}>
+            <div className="flex h-full items-center justify-center py-4">
+              <Donut value={stats.activeCustomers} total={stats.totalCustomers} label="Active" />
+            </div>
+          </Card>
+        </motion.div>
+
+        {/* Product + rider breakdowns */}
+        <motion.div variants={item} className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+          <Card title="Customers by city" subtitle="All cities">
+            <BarList data={stats.customersByCity} highlight={city} emptyLabel="No customers yet." />
+          </Card>
+          <Card title="Top riders" subtitle={`By volume · ${scope}`}>
+            <BarList data={stats.topRiders} unit="kg" emptyLabel="No rider activity yet." />
+          </Card>
+        </motion.div>
+      </motion.div>
     </div>
   );
 }
@@ -256,16 +323,23 @@ function Header({
   onToDate: (v: string) => void;
 }) {
   const inputClass =
-    "rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-800 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500";
+    "rounded-xl border border-gray-200 bg-white/80 backdrop-blur-sm px-3 py-2 text-sm font-medium text-gray-800 shadow-sm transition-all duration-200 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-100";
   return (
-    <div className="flex flex-wrap items-end justify-between gap-3">
+    <motion.div
+      initial={{ opacity: 0, y: -10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4 }}
+      className="flex flex-wrap items-end justify-between gap-4"
+    >
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight text-gray-900">Dashboard</h1>
-        <p className="mt-0.5 text-sm text-gray-500">Overview of pickups, revenue and settlements.</p>
+        <h1 className="text-2xl font-bold tracking-tight" style={{ color: "#1e1b4b" }}>
+          Dashboard
+        </h1>
+        <p className="mt-1 text-sm text-gray-500">Overview of pickups, revenue and settlements.</p>
       </div>
       <div className="flex flex-wrap items-end justify-end gap-3">
         <label className="flex items-center gap-2 text-sm text-gray-500">
-          <span className="hidden sm:inline">City</span>
+          <span className="hidden sm:inline font-medium">City</span>
           <select
             value={city}
             onChange={(e) => onCity(e.target.value)}
@@ -280,7 +354,7 @@ function Header({
             ))}
           </select>
         </label>
-        <label className="flex flex-col gap-1 text-xs font-medium text-gray-500">
+        <label className="flex flex-col gap-1 text-xs font-semibold text-gray-400 uppercase tracking-wider">
           From
           <input
             type="date"
@@ -290,7 +364,7 @@ function Header({
             className={inputClass}
           />
         </label>
-        <label className="flex flex-col gap-1 text-xs font-medium text-gray-500">
+        <label className="flex flex-col gap-1 text-xs font-semibold text-gray-400 uppercase tracking-wider">
           To
           <input
             type="date"
@@ -301,28 +375,45 @@ function Header({
           />
         </label>
       </div>
-    </div>
+    </motion.div>
   );
 }
 
-function Stat({ label, value, hint, accent = false }: { label: string; value: string; hint?: string; accent?: boolean }) {
+function KpiCard({ label, value, hint, icon, accent = false }: { label: string; value: string; hint?: string; accent?: boolean; icon?: React.ReactNode }) {
   return (
-    <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-      <p className="text-sm font-medium text-gray-500">{label}</p>
-      <p className={`mt-2 text-3xl font-semibold tracking-tight tabular-nums ${accent ? "text-indigo-600" : "text-gray-900"}`}>{value}</p>
-      {hint && <p className="mt-1 text-xs text-gray-400">{hint}</p>}
-    </div>
+    <motion.div
+      whileHover={{ y: -4, scale: 1.01 }}
+      transition={{ type: "spring", stiffness: 400, damping: 25 }}
+      className="rounded-2xl border border-white/60 bg-white p-5 shadow-sm cursor-default"
+      style={{ boxShadow: "0 1px 3px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.03)" }}
+    >
+      <div className="flex items-start justify-between">
+        <div className="flex-1 min-w-0">
+          <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">{label}</p>
+          <p className={`mt-2 text-2xl font-bold tracking-tight tabular-nums ${accent ? "text-indigo-600" : ""}`} style={!accent ? { color: "#1e1b4b" } : undefined}>
+            {value}
+          </p>
+          {hint && <p className="mt-1 text-xs text-gray-400 font-medium">{hint}</p>}
+        </div>
+        {icon && <div className="shrink-0 ml-3">{icon}</div>}
+      </div>
+    </motion.div>
   );
 }
 
 function Card({ title, subtitle, children, className = "" }: { title: string; subtitle?: string; children: React.ReactNode; className?: string }) {
   return (
-    <div className={`rounded-xl border border-gray-200 bg-white p-5 shadow-sm ${className}`}>
-      <div className="mb-4">
-        <h2 className="text-base font-semibold text-gray-900">{title}</h2>
-        {subtitle && <p className="text-xs text-gray-400">{subtitle}</p>}
+    <motion.div
+      whileHover={{ y: -2 }}
+      transition={{ type: "spring", stiffness: 400, damping: 30 }}
+      className={`rounded-2xl border border-white/60 bg-white p-6 shadow-sm ${className}`}
+      style={{ boxShadow: "0 1px 3px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.03)" }}
+    >
+      <div className="mb-5">
+        <h2 className="text-base font-bold" style={{ color: "#1e1b4b" }}>{title}</h2>
+        {subtitle && <p className="text-xs font-medium text-gray-400 mt-0.5">{subtitle}</p>}
       </div>
       {children}
-    </div>
+    </motion.div>
   );
 }

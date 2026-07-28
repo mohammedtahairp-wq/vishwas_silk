@@ -1,4 +1,4 @@
-import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import { HashRouter, Navigate, Route, Routes } from "react-router-dom";
 import { AuthProvider, useAuth } from "./auth/AuthContext";
 import { ProtectedRoute } from "./auth/ProtectedRoute";
 import { LoginPage } from "./pages/LoginPage";
@@ -39,7 +39,7 @@ function HomeRedirect() {
 
 export default function App() {
   return (
-    <BrowserRouter>
+    <HashRouter>
       <AuthProvider>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
@@ -84,6 +84,6 @@ export default function App() {
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </AuthProvider>
-    </BrowserRouter>
+    </HashRouter>
   );
 }

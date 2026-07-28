@@ -30,8 +30,9 @@ apiClient.interceptors.response.use(
     if (error.response?.status === 401) {
       localStorage.removeItem(TOKEN_STORAGE_KEY);
       localStorage.removeItem(ROLE_STORAGE_KEY);
-      if (window.location.pathname !== "/login") {
-        window.location.href = "/login";
+      const hash = window.location.hash;
+      if (!hash.includes("/login")) {
+        window.location.hash = "#/login";
       }
     }
     return Promise.reject(error);

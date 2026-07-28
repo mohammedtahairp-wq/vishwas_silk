@@ -10,3 +10,6 @@ backend/prisma/*.csv
 backend/prisma/*.xlsx
 *.log
 .DS_Store
+*.pem
+*.csv
+frontend/android/
