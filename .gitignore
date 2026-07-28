@@ -5,7 +5,8 @@ build/
 .agents/
 .claude/
 .env
-.env.*.local
+.env.*
+!.env.example
 backend/prisma/*.csv
 backend/prisma/*.xlsx
 *.log

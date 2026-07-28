@@ -9,7 +9,7 @@ export function errorHandler(err: unknown, _req: Request, res: Response, _next: 
   }
 
   if (err instanceof ZodError) {
-    return res.status(400).json({ error: "Validation failed", details: err.issues });
+    return res.status(400).json({ error: "Validation failed" });
   }
 
   if (err instanceof Prisma.PrismaClientKnownRequestError) {
