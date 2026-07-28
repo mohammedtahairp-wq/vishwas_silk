@@ -47,6 +47,14 @@ export interface Price {
   product?: Product;
 }
 
+export interface CustomerProduct {
+  productId: string;
+  productName: string;
+  productUnit: string;
+  pricePerKg: string;
+  effectiveFrom: string;
+}
+
 export interface PickupAdmin {
   id: string;
   customerId: string;
