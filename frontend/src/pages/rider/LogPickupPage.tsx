@@ -176,9 +176,6 @@ export function LogPickupPage() {
                 >
                   <div className="flex min-w-0 flex-1 items-center gap-2">
                     <span className="text-lg font-bold text-gray-900">{p.productName}</span>
-                    <span className="rounded bg-indigo-50 px-1.5 py-0.5 text-xs font-medium text-indigo-600">
-                      ₹{Number(p.pricePerKg).toLocaleString("en-IN")}/kg
-                    </span>
                   </div>
                   <div className="flex items-center gap-2">
                     <input
