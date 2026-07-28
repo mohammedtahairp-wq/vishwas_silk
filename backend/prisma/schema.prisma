@@ -49,6 +49,7 @@ model User {
 
 model Customer {
   id              String   @id @default(uuid())
+  serialNumber    String?  @unique @map("serial_number")
   name            String
   phone           String   @unique
   address         String
