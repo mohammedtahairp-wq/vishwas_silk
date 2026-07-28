@@ -44,7 +44,7 @@ export function CustomersListPage() {
   const visibleCustomers = customers.filter((customer) => {
     if (selectedCity && (customer.villageArea?.trim() || "Unspecified") !== selectedCity) return false;
     const query = search.trim().toLowerCase();
-    return !query || [customer.name, customer.phone, customer.address, customer.villageArea]
+    return !query || [customer.serialNumber, customer.name, customer.phone, customer.address, customer.villageArea]
       .some((value) => value?.toLowerCase().includes(query));
   });
 
@@ -104,7 +104,7 @@ export function CustomersListPage() {
           </div>
           <div className="flex flex-wrap items-end gap-3">
           <label className="text-xs font-medium text-gray-600">Search customer
-            <input className="ml-2 rounded border border-gray-300 bg-white px-3 py-1.5 text-sm" placeholder="Name, phone or address" value={search} onChange={(e) => setSearch(e.target.value)} />
+            <input className="ml-2 rounded border border-gray-300 bg-white px-3 py-1.5 text-sm" placeholder="Serial, name, phone or address" value={search} onChange={(e) => setSearch(e.target.value)} />
           </label>
           <label className="text-xs font-medium text-gray-600">
             Filter by city
@@ -159,6 +159,7 @@ export function CustomersListPage() {
         <table className="min-w-full text-sm">
           <thead className="bg-gray-50 text-gray-600 text-left">
             <tr>
+              <th className="px-4 py-2">Serial No</th>
               <th className="px-4 py-2">Name</th>
               <th className="px-4 py-2">Phone</th>
               <th className="px-4 py-2">City</th>
@@ -170,19 +171,20 @@ export function CustomersListPage() {
           <tbody>
             {loading ? (
               <tr>
-                <td className="px-4 py-4 text-gray-400" colSpan={6}>
+                <td className="px-4 py-4 text-gray-400" colSpan={7}>
                   Loading...
                 </td>
               </tr>
             ) : visibleCustomers.length === 0 ? (
               <tr>
-                <td className="px-4 py-4 text-gray-400" colSpan={6}>
+                <td className="px-4 py-4 text-gray-400" colSpan={7}>
                   No customers found{selectedCity ? ` in ${selectedCity}` : ""}.
                 </td>
               </tr>
             ) : (
               visibleCustomers.map((c) => (
                 <tr key={c.id} className="border-t border-gray-100 hover:bg-gray-50">
+                  <td className="px-4 py-2 font-mono font-semibold text-indigo-700">{c.serialNumber ?? "—"}</td>
                   <td className="px-4 py-2">
                     <Link to={`/admin/customers/${c.id}`} className="text-indigo-600 hover:underline">
                       {c.name}
@@ -260,6 +262,11 @@ function EditCustomerModal({ customer, cities, onClose, onSaved }: { customer: C
   return (
     <Modal title="Edit customer" onClose={onClose}>
       <form onSubmit={save} className="space-y-3">
+        {customer.serialNumber && (
+          <div className="rounded bg-indigo-50 px-3 py-2 text-sm font-mono font-semibold text-indigo-700">
+            {customer.serialNumber}
+          </div>
+        )}
         <Field label="Name">
           <input className="w-full border border-gray-300 rounded px-2 py-1.5" value={name} onChange={(e) => setName(e.target.value)} required />
         </Field>

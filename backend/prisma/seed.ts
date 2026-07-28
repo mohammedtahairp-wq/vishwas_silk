@@ -58,8 +58,8 @@ async function main() {
   });
 
   const customerSeeds = [
-    { name: "Suresh Traders", phone: "9876500002", address: "Main Bazaar Road", villageArea: "Kanchipuram", username: "customer1" },
-    { name: "Lakshmi Silk House", phone: "9876500003", address: "Temple Street", villageArea: "Arni", username: "customer2" },
+    { name: "Suresh Traders", phone: "9876500002", address: "Main Bazaar Road", villageArea: "Kanchipuram", username: "customer1", serialNumber: "KANCHIPURAM01" },
+    { name: "Lakshmi Silk House", phone: "9876500003", address: "Temple Street", villageArea: "Arni", username: "customer2", serialNumber: "ARNI01" },
   ];
 
   const customers = [];
@@ -68,6 +68,7 @@ async function main() {
     if (!customer) {
       customer = await prisma.customer.create({
         data: {
+          serialNumber: seed.serialNumber,
           name: seed.name,
           phone: seed.phone,
           address: seed.address,
@@ -75,6 +76,11 @@ async function main() {
           assignedRiderId: rider.id,
           createdById: admin.id,
         },
+      });
+    } else if (!customer.serialNumber) {
+      customer = await prisma.customer.update({
+        where: { id: customer.id },
+        data: { serialNumber: seed.serialNumber },
       });
     }
     await prisma.user.upsert({

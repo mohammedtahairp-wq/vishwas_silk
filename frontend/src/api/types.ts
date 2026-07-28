@@ -14,6 +14,7 @@ export interface CreateRiderResult {
 
 export interface Customer {
   id: string;
+  serialNumber?: string | null;
   name: string;
   phone: string;
   address: string;

@@ -63,7 +63,7 @@ export function LogPickupPage() {
             <option value="">Select customer</option>
             {customers.map((c) => (
               <option key={c.id} value={c.id}>
-                {c.name}
+                {c.serialNumber ? `${c.serialNumber} - ` : ""}{c.name}
               </option>
             ))}
           </select>

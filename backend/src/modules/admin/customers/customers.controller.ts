@@ -32,7 +32,8 @@ export async function listCustomersHandler(req: Request, res: Response) {
   const riderId = typeof req.query.rider_id === "string" ? req.query.rider_id : undefined;
   const status =
     req.query.status === "active" || req.query.status === "inactive" ? req.query.status : undefined;
-  const customers = await customersService.listCustomers({ riderId, status });
+  const search = typeof req.query.search === "string" ? req.query.search : undefined;
+  const customers = await customersService.listCustomers({ riderId, status, search });
   res.json(customers);
 }
 

@@ -95,6 +95,7 @@ export function CustomerAccountsPage() {
         <table className="min-w-full text-sm">
           <thead className="bg-gray-50 text-left text-gray-600">
             <tr>
+              <th className="px-4 py-3">Serial No</th>
               <th className="px-4 py-3">Customer name</th>
               <th className="px-4 py-3">Phone number</th>
               <th className="px-4 py-3 text-right">Amount</th>
@@ -107,6 +108,7 @@ export function CustomerAccountsPage() {
               <Empty text="No customers found for this selection." />
             ) : rows.map(({ customer, amount }) => (
               <tr key={customer.id} className="border-t border-gray-100 hover:bg-indigo-50/40">
+                <td className="px-4 py-3 font-mono font-semibold text-indigo-700">{customer.serialNumber ?? "—"}</td>
                 <td className="px-4 py-3">
                   <Link to={historyLink(customer.id)} className="font-medium text-indigo-600 hover:underline">
                     {customer.name}
@@ -124,7 +126,7 @@ export function CustomerAccountsPage() {
           {!loading && rows.length > 0 && (
             <tfoot>
               <tr className="border-t-2 border-indigo-600 bg-indigo-50 font-semibold">
-                <td className="px-4 py-3" colSpan={2}>TOTAL · {rows.length} customers</td>
+                <td className="px-4 py-3" colSpan={3}>TOTAL · {rows.length} customers</td>
                 <td className="px-4 py-3 text-right">{money(total)}</td>
               </tr>
             </tfoot>
@@ -140,5 +142,5 @@ function Filter({ label, children }: { label: string; children: React.ReactNode 
 }
 
 function Empty({ text }: { text: string }) {
-  return <tr><td colSpan={3} className="px-4 py-10 text-center text-gray-400">{text}</td></tr>;
+  return <tr><td colSpan={4} className="px-4 py-10 text-center text-gray-400">{text}</td></tr>;
 }

@@ -88,7 +88,7 @@ export function CustomerDetailPage() {
 
   return <div className="space-y-6">
     <div className="flex flex-wrap items-start justify-between gap-3">
-      <div><Link to="/admin/customers" className="text-sm text-indigo-600 hover:underline">← Back to customer search</Link><h1 className="mt-2 text-2xl font-semibold text-gray-900">{customer.name}</h1><p className="text-sm text-gray-500">{customer.phone} · {customer.address}{customer.villageArea ? ` · ${customer.villageArea}` : ""}</p></div>
+      <div><Link to="/admin/customers" className="text-sm text-indigo-600 hover:underline">← Back to customer search</Link><h1 className="mt-2 text-2xl font-semibold text-gray-900">{customer.name}</h1>{customer.serialNumber && <p className="font-mono text-sm font-semibold text-indigo-600">{customer.serialNumber}</p>}<p className="text-sm text-gray-500">{customer.phone} · {customer.address}{customer.villageArea ? ` · ${customer.villageArea}` : ""}</p></div>
       <span className={`rounded-full px-3 py-1 text-xs font-medium ${customer.status === "active" ? "bg-green-100 text-green-700" : "bg-gray-200 text-gray-600"}`}>{customer.status}</span>
     </div>
     {error && <p className="rounded bg-red-50 p-3 text-sm text-red-700">{error}</p>}

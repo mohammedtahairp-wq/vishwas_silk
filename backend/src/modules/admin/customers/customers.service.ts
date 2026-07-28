@@ -19,11 +19,23 @@ interface UpdateCustomerInput {
 interface ListCustomersFilter {
   riderId?: string;
   status?: "active" | "inactive";
+  search?: string;
 }
 
-export function createCustomer(input: CreateCustomerInput) {
+async function generateSerialNumber(city?: string | null): Promise<string> {
+  const prefix = (city || "UNASSIGNED").toUpperCase().replace(/[^A-Z]/g, "").slice(0, 12);
+  const count = await prisma.customer.count({
+    where: { villageArea: city || null },
+  });
+  const next = count + 1;
+  return `${prefix}${String(next).padStart(2, "0")}`;
+}
+
+export async function createCustomer(input: CreateCustomerInput) {
+  const serialNumber = await generateSerialNumber(input.villageArea);
   return prisma.customer.create({
     data: {
+      serialNumber,
       name: input.name,
       phone: input.phone,
       address: input.address,
@@ -38,6 +50,15 @@ export function listCustomers(filter: ListCustomersFilter) {
     where: {
       assignedRiderId: filter.riderId,
       status: filter.status,
+      ...(filter.search
+        ? {
+            OR: [
+              { serialNumber: { contains: filter.search, mode: "insensitive" } },
+              { name: { contains: filter.search, mode: "insensitive" } },
+              { phone: { contains: filter.search } },
+            ],
+          }
+        : {}),
     },
     include: { assignedRider: true },
     orderBy: { createdAt: "desc" },
