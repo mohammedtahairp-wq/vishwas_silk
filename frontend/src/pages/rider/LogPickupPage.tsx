@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
+import { useSearchParams } from "react-router-dom";
 import { riderApi } from "../../api/rider.api";
 import type { Customer, CustomerProduct } from "../../api/types";
 
 export function LogPickupPage() {
+  const [searchParams] = useSearchParams();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [filteredCustomers, setFilteredCustomers] = useState<Customer[]>([]);
   const [search, setSearch] = useState("");
@@ -16,11 +18,18 @@ export function LogPickupPage() {
   const [message, setMessage] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const initialSelectDone = useRef(false);
 
   useEffect(() => {
     riderApi.myCustomers().then((rows) => {
       setCustomers(rows);
       setFilteredCustomers(rows);
+      const customerId = searchParams.get("customerId");
+      if (customerId && !initialSelectDone.current) {
+        initialSelectDone.current = true;
+        const match = rows.find((c) => c.id === customerId);
+        if (match) selectCustomer(match);
+      }
     });
   }, []);
 

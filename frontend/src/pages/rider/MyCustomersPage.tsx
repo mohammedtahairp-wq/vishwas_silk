@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { riderApi } from "../../api/rider.api";
 import type { Customer } from "../../api/types";
 
 export function MyCustomersPage() {
   const [customers, setCustomers] = useState<Customer[]>([]);
+  const navigate = useNavigate();
 
   useEffect(() => {
     riderApi.myCustomers().then(setCustomers);
@@ -17,13 +19,17 @@ export function MyCustomersPage() {
           <p className="text-gray-400">No customers assigned to you yet.</p>
         ) : (
           customers.map((c) => (
-            <div key={c.id} className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+            <button
+              key={c.id}
+              onClick={() => navigate(`/rider/log-pickup?customerId=${c.id}`)}
+              className="text-left bg-white p-4 rounded-lg shadow-sm border border-gray-200 hover:border-indigo-400 hover:shadow-md transition-all cursor-pointer"
+            >
               <p className="font-medium text-gray-900">{c.name}</p>
               <p className="text-sm text-gray-500">{c.phone}</p>
               <p className="text-sm text-gray-500">
                 {c.address} {c.villageArea ? `· ${c.villageArea}` : ""}
               </p>
-            </div>
+            </button>
           ))
         )}
       </div>
