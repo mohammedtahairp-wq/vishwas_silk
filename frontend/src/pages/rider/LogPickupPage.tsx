@@ -107,7 +107,7 @@ export function LogPickupPage() {
         <div className="flex h-10 w-10 items-center justify-center rounded-full bg-indigo-100 text-lg text-indigo-700">+</div>
         <div>
           <h1 className="text-xl font-bold text-gray-900">Log Pickup</h1>
-          <p className="text-sm text-gray-500">Record milk collection from a customer</p>
+          <p className="text-sm text-gray-500">Record collection from a customer</p>
         </div>
       </div>
 
