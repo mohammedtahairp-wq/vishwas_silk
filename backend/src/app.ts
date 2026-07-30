@@ -12,8 +12,12 @@ import { errorHandler } from "./middleware/errorHandler";
 
 const ALLOWED_ORIGINS = [
   "http://localhost:5173",
+  "http://localhost",
+  "https://localhost",
+  "capacitor://localhost",
   "http://vishwas-silk-frontend.s3-website.ap-south-1.amazonaws.com",
   "https://3.110.170.133",
+  "https://manage.vishwassilk.com",
 ];
 
 export const app = express();
