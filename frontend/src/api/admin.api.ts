@@ -45,6 +45,10 @@ export const adminApi = {
 
   listPickups: (params?: { customer_id?: string; rider_id?: string; product_id?: string; from?: string; to?: string }) =>
     apiClient.get<PickupAdmin[]>("/admin/pickups", { params }).then((r) => r.data),
+  createBatchPickups: (data: { customer_id: string; rider_id: string; items: { product_id: string; kg: number }[]; pickup_date?: string }) =>
+    apiClient.post<PickupAdmin[]>("/admin/pickups", data).then((r) => r.data),
+  updatePickup: (id: string, data: { customer_id: string; rider_id: string; product_id: string; kg: number; pickup_date: string }) =>
+    apiClient.put<PickupAdmin>(`/admin/pickups/${id}`, data).then((r) => r.data),
 
   listSettlements: () => apiClient.get<Transaction[]>("/admin/settlements").then((r) => r.data),
   generateSettlement: (data: { customer_id: string; month: number; year: number }) =>

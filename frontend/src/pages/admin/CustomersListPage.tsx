@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { adminApi } from "../../api/admin.api";
@@ -17,6 +17,14 @@ export function CustomersListPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  const [serialFilter, setSerialFilter] = useState("");
+  const [nameFilter, setNameFilter] = useState("");
+  const [phoneFilter, setPhoneFilter] = useState("");
+  const [addressFilter, setAddressFilter] = useState("");
+  const [riderFilter, setRiderFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+  const [sortField, setSortField] = useState<"serial" | "name" | null>(null);
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
 
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
@@ -49,10 +57,33 @@ export function CustomersListPage() {
 
   const visibleCustomers = customers.filter((customer) => {
     if (selectedCity && (customer.villageArea?.trim() || "Unspecified") !== selectedCity) return false;
+    if (riderFilter === "__unassigned__" && customer.assignedRiderId) return false;
+    if (riderFilter && riderFilter !== "__unassigned__" && customer.assignedRiderId !== riderFilter) return false;
+    if (statusFilter && customer.status !== statusFilter) return false;
     const query = search.trim().toLowerCase();
-    return !query || [customer.serialNumber, customer.name, customer.phone, customer.address, customer.villageArea]
-      .some((value) => value?.toLowerCase().includes(query));
+    if (query && ![customer.serialNumber, customer.name, customer.phone, customer.address, customer.villageArea]
+      .some((value) => value?.toLowerCase().includes(query))) return false;
+    if (serialFilter && !customer.serialNumber?.toLowerCase().includes(serialFilter.trim().toLowerCase())) return false;
+    if (nameFilter && !customer.name.toLowerCase().includes(nameFilter.trim().toLowerCase())) return false;
+    if (phoneFilter && !customer.phone.toLowerCase().includes(phoneFilter.trim().toLowerCase())) return false;
+    if (addressFilter && !customer.address?.toLowerCase().includes(addressFilter.trim().toLowerCase())) return false;
+    return true;
+  }).sort((a, b) => {
+    if (!sortField) return 0;
+    const valA = sortField === "serial" ? (a.serialNumber ?? "") : a.name;
+    const valB = sortField === "serial" ? (b.serialNumber ?? "") : b.name;
+    const cmp = valA.localeCompare(valB);
+    return sortDir === "asc" ? cmp : -cmp;
   });
+
+  function toggleSort(field: "serial" | "name") {
+    if (sortField === field) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortField(field);
+      setSortDir("asc");
+    }
+  }
 
   function changeCity(value: string) {
     setSearchParams(value ? { city: value } : {});
@@ -77,7 +108,7 @@ export function CustomersListPage() {
           : undefined,
       });
       if (assignedRiderId) await adminApi.assignRider(result.customer.id, assignedRiderId);
-      setCreatedInfo(`"${result.customer.name}" created${result.username ? ` — username: ${result.username}` : ""}`);
+      setCreatedInfo(`"${result.customer.name}" created${result.username ? ` â€” username: ${result.username}` : ""}`);
       setName("");
       setPhone("");
       setAddress("");
@@ -88,7 +119,7 @@ export function CustomersListPage() {
       setProductPrices([]);
       await load();
     } catch (err) {
-      setError(apiErrorMessage(err, "Could not create customer — check the fields and try again"));
+      setError(apiErrorMessage(err, "Could not create customer â€” check the fields and try again"));
     } finally {
       setSubmitting(false);
     }
@@ -125,21 +156,42 @@ export function CustomersListPage() {
             {selectedCity && <p className="mt-1 text-sm text-gray-500">Showing customers in {selectedCity}</p>}
           </div>
           <div className="flex flex-wrap items-end gap-3">
-          <label className="text-xs font-medium text-gray-600">Search customer
-            <input className="ml-2 rounded border border-gray-300 bg-white px-3 py-1.5 text-sm" placeholder="Serial, name, phone or address" value={search} onChange={(e) => setSearch(e.target.value)} />
-          </label>
-          <label className="text-xs font-medium text-gray-600">
-            Filter by city
-            <select
-              className="ml-2 rounded border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-800"
-              value={selectedCity}
-              onChange={(event) => changeCity(event.target.value)}
-            >
-              <option value="">All cities</option>
-              {cities.map((item) => <option key={item.id} value={item.name}>{item.name}</option>)}
-              {customers.some((customer) => !customer.villageArea?.trim()) && <option value="Unspecified">Unspecified</option>}
-            </select>
-          </label>
+            <label className="text-xs font-medium text-gray-600">Search
+              <input className="ml-2 rounded border border-gray-300 bg-white px-3 py-1.5 text-sm" placeholder="Any field" value={search} onChange={(e) => setSearch(e.target.value)} />
+            </label>
+            <label className="text-xs font-medium text-gray-600">Serial
+              <input className="ml-2 w-24 rounded border border-gray-300 bg-white px-3 py-1.5 text-sm" placeholder="Serial" value={serialFilter} onChange={(e) => setSerialFilter(e.target.value)} />
+            </label>
+            <label className="text-xs font-medium text-gray-600">Name
+              <input className="ml-2 w-28 rounded border border-gray-300 bg-white px-3 py-1.5 text-sm" placeholder="Name" value={nameFilter} onChange={(e) => setNameFilter(e.target.value)} />
+            </label>
+            <label className="text-xs font-medium text-gray-600">Phone
+              <input className="ml-2 w-28 rounded border border-gray-300 bg-white px-3 py-1.5 text-sm" placeholder="Phone" value={phoneFilter} onChange={(e) => setPhoneFilter(e.target.value)} />
+            </label>
+            <label className="text-xs font-medium text-gray-600">Address
+              <input className="ml-2 w-28 rounded border border-gray-300 bg-white px-3 py-1.5 text-sm" placeholder="Address" value={addressFilter} onChange={(e) => setAddressFilter(e.target.value)} />
+            </label>
+            <label className="text-xs font-medium text-gray-600">City
+              <select className="ml-2 rounded border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-800" value={selectedCity} onChange={(event) => changeCity(event.target.value)}>
+                <option value="">All cities</option>
+                {cities.map((item) => <option key={item.id} value={item.name}>{item.name}</option>)}
+                {customers.some((customer) => !customer.villageArea?.trim()) && <option value="Unspecified">Unspecified</option>}
+              </select>
+            </label>
+            <label className="text-xs font-medium text-gray-600">Rider
+              <select className="ml-2 rounded border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-800" value={riderFilter} onChange={(e) => setRiderFilter(e.target.value)}>
+                <option value="">All riders</option>
+                {riders.map((rider) => <option key={rider.id} value={rider.id}>{rider.name}</option>)}
+                <option value="__unassigned__">Unassigned</option>
+              </select>
+            </label>
+            <label className="text-xs font-medium text-gray-600">Status
+              <select className="ml-2 rounded border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-800" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+                <option value="">All</option>
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+              </select>
+            </label>
           </div>
         </div>
         <form onSubmit={handleCreate} className="bg-white p-4 rounded-lg shadow-sm border border-gray-200 space-y-3">
@@ -179,7 +231,7 @@ export function CustomersListPage() {
           <div className="border-t border-gray-100 pt-3">
             <div className="flex items-center justify-between mb-2">
               <label className="text-xs font-semibold text-gray-700">Products &amp; Rates (optional)</label>
-              <button type="button" onClick={() => setProductPrices([...productPrices, { productId: "", pricePerKg: "" }])} className="text-xs text-indigo-600 hover:underline">+ Add product</button>
+              <button type="button" onClick={() => setProductPrices([...productPrices, { productId: "", pricePerKg: "" }])} className="text-xs text-emerald-600 hover:underline">+ Add product</button>
             </div>
             {productPrices.length === 0 && <p className="text-xs text-gray-400">No products added. You can set them later from the customer detail page.</p>}
             {productPrices.map((row, idx) => (
@@ -201,7 +253,7 @@ export function CustomersListPage() {
           <button
             type="submit"
             disabled={submitting}
-            className="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white rounded px-4 py-1.5 font-medium"
+            className="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded px-4 py-1.5 font-medium"
           >
             Add customer
           </button>
@@ -215,8 +267,12 @@ export function CustomersListPage() {
         <table className="min-w-full text-sm">
           <thead className="bg-gray-50 text-gray-600 text-left">
             <tr>
-              <th className="px-4 py-2">Serial No</th>
-              <th className="px-4 py-2">Name</th>
+              <th className="px-4 py-2 cursor-pointer select-none" onClick={() => toggleSort("serial")}>
+                Serial No {sortField === "serial" ? (sortDir === "asc" ? "\u25B2" : "\u25BC") : ""}
+              </th>
+              <th className="px-4 py-2 cursor-pointer select-none" onClick={() => toggleSort("name")}>
+                Name {sortField === "name" ? (sortDir === "asc" ? "\u25B2" : "\u25BC") : ""}
+              </th>
               <th className="px-4 py-2">Phone</th>
               <th className="px-4 py-2">City</th>
               <th className="px-4 py-2">Rider</th>
@@ -240,14 +296,14 @@ export function CustomersListPage() {
             ) : (
               visibleCustomers.map((c) => (
                 <tr key={c.id} className="border-t border-gray-100 hover:bg-gray-50">
-                  <td className="px-4 py-2 font-mono font-semibold text-indigo-700">{c.serialNumber ?? "—"}</td>
+                  <td className="px-4 py-2 font-mono font-semibold text-emerald-700">{c.serialNumber ?? "â€”"}</td>
                   <td className="px-4 py-2">
-                    <Link to={`/admin/customers/${c.id}`} className="text-indigo-600 hover:underline">
+                    <Link to={`/admin/customers/${c.id}`} className="text-emerald-600 hover:underline">
                       {c.name}
                     </Link>
                   </td>
                   <td className="px-4 py-2">{c.phone}</td>
-                  <td className="px-4 py-2">{c.villageArea ?? "—"}</td>
+                  <td className="px-4 py-2">{c.villageArea ?? "â€”"}</td>
                   <td className="px-4 py-2">
                     <select
                       aria-label={`Assigned rider for ${c.name}`}
@@ -261,7 +317,7 @@ export function CustomersListPage() {
                   </td>
                   <td className="px-4 py-2 capitalize">{c.status}</td>
                   <td className="px-4 py-2 text-right space-x-3 whitespace-nowrap">
-                    <button onClick={() => setEditing(c)} className="text-indigo-600 hover:underline">
+                    <button onClick={() => setEditing(c)} className="text-emerald-600 hover:underline">
                       Edit
                     </button>
                     <button onClick={() => handleDelete(c)} className="text-red-600 hover:underline">
@@ -340,7 +396,7 @@ function EditCustomerModal({ customer, cities, products, onClose, onSaved }: { c
     <Modal title="Edit customer" onClose={onClose}>
       <form onSubmit={save} className="space-y-3">
         {customer.serialNumber && (
-          <div className="rounded bg-indigo-50 px-3 py-2 text-sm font-mono font-semibold text-indigo-700">
+          <div className="rounded bg-emerald-50 px-3 py-2 text-sm font-mono font-semibold text-emerald-700">
             {customer.serialNumber}
           </div>
         )}
@@ -365,7 +421,7 @@ function EditCustomerModal({ customer, cities, products, onClose, onSaved }: { c
         <div className="border-t border-gray-100 pt-3">
           <div className="flex items-center justify-between mb-2">
             <label className="text-xs font-semibold text-gray-700">Products &amp; Rates</label>
-            <button type="button" onClick={() => setProductPrices([...productPrices, { productId: "", pricePerKg: "" }])} className="text-xs text-indigo-600 hover:underline">+ Add product</button>
+            <button type="button" onClick={() => setProductPrices([...productPrices, { productId: "", pricePerKg: "" }])} className="text-xs text-emerald-600 hover:underline">+ Add product</button>
           </div>
           {!loadedPrices && <p className="text-xs text-gray-400">Loading prices...</p>}
           {loadedPrices && productPrices.length === 0 && <p className="text-xs text-gray-400">No product rates set.</p>}
@@ -389,7 +445,7 @@ function EditCustomerModal({ customer, cities, products, onClose, onSaved }: { c
           <button type="button" onClick={onClose} className="rounded px-4 py-1.5 text-gray-600 hover:bg-gray-100">
             Cancel
           </button>
-          <button type="submit" disabled={saving} className="rounded bg-indigo-600 px-4 py-1.5 font-medium text-white hover:bg-indigo-700 disabled:opacity-50">
+          <button type="submit" disabled={saving} className="rounded bg-emerald-600 px-4 py-1.5 font-medium text-white hover:bg-emerald-700 disabled:opacity-50">
             Save
           </button>
         </div>

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
 import { adminApi } from "../../api/admin.api";
 import { apiErrorMessage } from "../../api/client";
@@ -62,7 +62,7 @@ export function ProductsPage() {
             <label className="block text-xs font-medium text-gray-600 mb-1">Effective from</label>
             <input type="date" className="border border-gray-300 rounded px-2 py-1.5" value={effectiveFrom} onChange={(e) => setEffectiveFrom(e.target.value)} required />
           </div>
-          <button type="submit" className="bg-indigo-600 hover:bg-indigo-700 text-white rounded px-4 py-1.5 font-medium">
+          <button type="submit" className="bg-emerald-600 hover:bg-emerald-700 text-white rounded px-4 py-1.5 font-medium">
             Add product
           </button>
         </form>
@@ -93,7 +93,7 @@ export function ProductsPage() {
                   <td className="px-4 py-2">{p.unit}</td>
                   <td className="px-4 py-2 capitalize">{p.status}</td>
                   <td className="px-4 py-2 text-right space-x-3 whitespace-nowrap">
-                    <button onClick={() => setEditing(p)} className="text-indigo-600 hover:underline">
+                    <button onClick={() => setEditing(p)} className="text-emerald-600 hover:underline">
                       Edit
                     </button>
                     <button onClick={() => handleDelete(p)} className="text-red-600 hover:underline">
@@ -164,7 +164,7 @@ function EditProductModal({ product, onClose, onSaved }: { product: Product; onC
           <button type="button" onClick={onClose} className="rounded px-4 py-1.5 text-gray-600 hover:bg-gray-100">
             Cancel
           </button>
-          <button type="submit" disabled={saving} className="rounded bg-indigo-600 px-4 py-1.5 font-medium text-white hover:bg-indigo-700 disabled:opacity-50">
+          <button type="submit" disabled={saving} className="rounded bg-emerald-600 px-4 py-1.5 font-medium text-white hover:bg-emerald-700 disabled:opacity-50">
             Save
           </button>
         </div>

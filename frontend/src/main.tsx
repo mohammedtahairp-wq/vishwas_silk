@@ -9,7 +9,7 @@ import App from './App.tsx'
 async function bootstrap() {
   if (Capacitor.isNativePlatform()) {
     StatusBar.setStyle({ style: Style.Light })
-    StatusBar.setBackgroundColor({ color: '#4f46e5' })
+    StatusBar.setBackgroundColor({ color: '#059669' })
   }
 
   createRoot(document.getElementById('root')!).render(

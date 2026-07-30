@@ -14,6 +14,7 @@ import { RiderDetailPage } from "./pages/admin/RiderDetailPage";
 import { ProductsPage } from "./pages/admin/ProductsPage";
 import { PricingPage } from "./pages/admin/PricingPage";
 import { PickupsPage } from "./pages/admin/PickupsPage";
+import { AdminLogPickupPage } from "./pages/admin/LogPickupPage";
 import { SettlementsPage } from "./pages/admin/SettlementsPage";
 import { GrandTotalPage } from "./pages/admin/GrandTotalPage";
 import { CustomerAccountsPage } from "./pages/admin/CustomerAccountsPage";
@@ -57,6 +58,7 @@ export default function App() {
               <Route path="products" element={<ProductsPage />} />
               <Route path="pricing" element={<PricingPage />} />
               <Route path="pickups" element={<PickupsPage />} />
+              <Route path="log-pickup" element={<AdminLogPickupPage />} />
               <Route path="grand-total" element={<GrandTotalPage />} />
               <Route path="settlements" element={<SettlementsPage />} />
             </Route>

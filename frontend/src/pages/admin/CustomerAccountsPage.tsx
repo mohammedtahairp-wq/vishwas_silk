@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+﻿import { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { adminApi } from "../../api/admin.api";
 import { apiErrorMessage } from "../../api/client";
@@ -21,6 +21,7 @@ export function CustomerAccountsPage() {
   const [pickups, setPickups] = useState<PickupAdmin[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
 
   useEffect(() => {
     setLoading(true);
@@ -44,11 +45,13 @@ export function CustomerAccountsPage() {
     for (const pickup of pickups) {
       amountByCustomer.set(pickup.customerId, (amountByCustomer.get(pickup.customerId) ?? 0) + Number(pickup.amount || 0));
     }
+    const q = search.trim().toLowerCase();
     return customers
       .filter((customer) => !city || (customer.villageArea?.trim() || "Unspecified") === city)
+      .filter((customer) => !q || customer.name.toLowerCase().includes(q) || customer.serialNumber?.toLowerCase().includes(q))
       .map((customer) => ({ customer, amount: amountByCustomer.get(customer.id) ?? 0 }))
       .sort((a, b) => b.amount - a.amount || a.customer.name.localeCompare(b.customer.name));
-  }, [customers, pickups, city]);
+  }, [customers, pickups, city, search]);
 
   const total = rows.reduce((sum, row) => sum + row.amount, 0);
 
@@ -69,11 +72,14 @@ export function CustomerAccountsPage() {
     <div className="space-y-5">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <Link to="/admin" className="text-sm text-indigo-600 hover:underline">← Back to dashboard</Link>
+          <Link to="/admin" className="text-sm text-emerald-600 hover:underline">â† Back to dashboard</Link>
           <h1 className="mt-2 text-2xl font-semibold text-gray-900">Customer Accounts</h1>
           <p className="text-sm text-gray-500">Customer collection amounts without profile-management details.</p>
         </div>
         <div className="flex flex-wrap items-end gap-3">
+          <Filter label="Search">
+            <input type="text" placeholder="Name or serial" value={search} onChange={(e) => setSearch(e.target.value)} className="filter-input" />
+          </Filter>
           <Filter label="City">
             <select value={city} onChange={(e) => updateFilter("city", e.target.value)} className="filter-input">
               <option value="">All cities</option>
@@ -107,16 +113,16 @@ export function CustomerAccountsPage() {
             ) : rows.length === 0 ? (
               <Empty text="No customers found for this selection." />
             ) : rows.map(({ customer, amount }) => (
-              <tr key={customer.id} className="border-t border-gray-100 hover:bg-indigo-50/40">
-                <td className="px-4 py-3 font-mono font-semibold text-indigo-700">{customer.serialNumber ?? "—"}</td>
+              <tr key={customer.id} className="border-t border-gray-100 hover:bg-emerald-50/40">
+                <td className="px-4 py-3 font-mono font-semibold text-emerald-700">{customer.serialNumber ?? "â€”"}</td>
                 <td className="px-4 py-3">
-                  <Link to={historyLink(customer.id)} className="font-medium text-indigo-600 hover:underline">
+                  <Link to={historyLink(customer.id)} className="font-medium text-emerald-600 hover:underline">
                     {customer.name}
                   </Link>
                 </td>
                 <td className="px-4 py-3">{customer.phone}</td>
                 <td className="px-4 py-3 text-right">
-                  <Link to={historyLink(customer.id)} className="font-semibold text-indigo-600 hover:underline">
+                  <Link to={historyLink(customer.id)} className="font-semibold text-emerald-600 hover:underline">
                     {money(amount)}
                   </Link>
                 </td>
@@ -125,8 +131,8 @@ export function CustomerAccountsPage() {
           </tbody>
           {!loading && rows.length > 0 && (
             <tfoot>
-              <tr className="border-t-2 border-indigo-600 bg-indigo-50 font-semibold">
-                <td className="px-4 py-3" colSpan={3}>TOTAL · {rows.length} customers</td>
+              <tr className="border-t-2 border-emerald-600 bg-emerald-50 font-semibold">
+                <td className="px-4 py-3" colSpan={3}>TOTAL Â· {rows.length} customers</td>
                 <td className="px-4 py-3 text-right">{money(total)}</td>
               </tr>
             </tfoot>

@@ -1,6 +1,6 @@
-export const SERIES = "#6366f1";
-export const SERIES_GRADIENT = ["#6366f1", "#818cf8"];
-export const ACCENT_COLORS = ["#6366f1", "#8b5cf6", "#a855f7", "#c084fc", "#e879f9", "#f472b6"];
+export const SERIES = "#10b981";
+export const SERIES_GRADIENT = ["#10b981", "#34d399"];
+export const ACCENT_COLORS = ["#10b981", "#14b8a6", "#06b6d4", "#34d399", "#6ee7b7", "#a7f3d0"];
 
 export const inr = (n: number) =>
   new Intl.NumberFormat("en-IN", { maximumFractionDigits: 0 }).format(Math.round(n));

@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useMemo, useState } from "react";
+﻿import { Fragment, useEffect, useMemo, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { adminApi } from "../../api/admin.api";
 import { apiErrorMessage } from "../../api/client";
@@ -104,11 +104,11 @@ export function CustomerProductHistoryPage() {
     <div className="space-y-5">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <Link to={`/admin/customer-accounts?${backParams.toString()}`} className="text-sm text-indigo-600 hover:underline">
-            ← Back to customer accounts
+          <Link to={`/admin/customer-accounts?${backParams.toString()}`} className="text-sm text-emerald-600 hover:underline">
+            â† Back to customer accounts
           </Link>
           <h1 className="mt-2 text-2xl font-semibold text-gray-900">{customer?.name ?? "Customer product history"}</h1>
-          {customer && <p className="text-sm text-gray-500">{customer.phone} · {customer.villageArea || "Unspecified"}</p>}
+          {customer && <p className="text-sm text-gray-500">{customer.phone} Â· {customer.villageArea || "Unspecified"}</p>}
         </div>
         <div className="grid w-full grid-cols-2 gap-3 sm:w-auto">
           <Filter label="From">
@@ -138,7 +138,7 @@ export function CustomerProductHistoryPage() {
           </div>
         ) : dateRows.map((row) => (
           <article key={row.date} className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
-            <div className="flex items-center justify-between gap-3 bg-indigo-700 px-4 py-3 text-white">
+            <div className="flex items-center justify-between gap-3 bg-emerald-700 px-4 py-3 text-white">
               <h2 className="font-semibold">{new Date(`${row.date}T00:00:00`).toLocaleDateString("en-IN")}</h2>
               <span className="text-sm font-semibold">{money(row.amount)}</span>
             </div>
@@ -156,14 +156,14 @@ export function CustomerProductHistoryPage() {
                 );
               })}
             </div>
-            <div className="grid grid-cols-2 gap-3 bg-indigo-50 px-4 py-3 text-sm">
+            <div className="grid grid-cols-2 gap-3 bg-emerald-50 px-4 py-3 text-sm">
               <div>
-                <p className="text-xs uppercase tracking-wide text-indigo-500">Total quantity</p>
-                <p className="mt-0.5 font-semibold text-indigo-900">{number(row.kg)} kg</p>
+                <p className="text-xs uppercase tracking-wide text-emerald-500">Total quantity</p>
+                <p className="mt-0.5 font-semibold text-emerald-900">{number(row.kg)} kg</p>
               </div>
               <div className="text-right">
-                <p className="text-xs uppercase tracking-wide text-indigo-500">Total amount</p>
-                <p className="mt-0.5 font-semibold text-indigo-900">{money(row.amount)}</p>
+                <p className="text-xs uppercase tracking-wide text-emerald-500">Total amount</p>
+                <p className="mt-0.5 font-semibold text-emerald-900">{money(row.amount)}</p>
               </div>
             </div>
           </article>
@@ -173,28 +173,28 @@ export function CustomerProductHistoryPage() {
       <div className="hidden overflow-x-auto rounded-xl border border-gray-200 bg-white shadow-sm md:block">
         <table className="min-w-max text-sm">
           <thead className="text-white">
-            <tr className="bg-indigo-700">
-              <th rowSpan={2} className="sticky left-0 z-10 min-w-32 border-r border-indigo-500 bg-indigo-700 px-4 py-3 text-left">
+            <tr className="bg-emerald-700">
+              <th rowSpan={2} className="sticky left-0 z-10 min-w-32 border-r border-emerald-500 bg-emerald-700 px-4 py-3 text-left">
                 Date
               </th>
               {activeProducts.map((product) => (
-                <th key={product.id} colSpan={2} className="min-w-48 border-r border-indigo-500 px-3 py-3 text-center text-base font-semibold">
+                <th key={product.id} colSpan={2} className="min-w-48 border-r border-emerald-500 px-3 py-3 text-center text-base font-semibold">
                   {product.name}
                 </th>
               ))}
-              <th colSpan={2} className="sticky right-0 z-20 min-w-48 border-l border-indigo-500 bg-indigo-700 px-3 py-3 text-center text-base font-semibold">
+              <th colSpan={2} className="sticky right-0 z-20 min-w-48 border-l border-emerald-500 bg-emerald-700 px-3 py-3 text-center text-base font-semibold">
                 Total
               </th>
             </tr>
-            <tr className="bg-indigo-600">
+            <tr className="bg-emerald-600">
               {activeProducts.map((product) => (
                 <Fragment key={product.id}>
                   <th className="min-w-20 px-3 py-2 text-right">Kg</th>
-                  <th className="min-w-28 border-r border-indigo-400 px-3 py-2 text-right">Amount</th>
+                  <th className="min-w-28 border-r border-emerald-400 px-3 py-2 text-right">Amount</th>
                 </Fragment>
               ))}
-              <th className="sticky right-28 z-20 min-w-20 border-l border-indigo-400 bg-indigo-600 px-3 py-2 text-right">Kg</th>
-              <th className="sticky right-0 z-20 min-w-28 bg-indigo-600 px-3 py-2 text-right">Amount</th>
+              <th className="sticky right-28 z-20 min-w-20 border-l border-emerald-400 bg-emerald-600 px-3 py-2 text-right">Kg</th>
+              <th className="sticky right-0 z-20 min-w-28 bg-emerald-600 px-3 py-2 text-right">Amount</th>
             </tr>
           </thead>
           <tbody>
@@ -203,7 +203,7 @@ export function CustomerProductHistoryPage() {
             ) : dateRows.length === 0 ? (
               <Empty text="No product history found for this date range." columns={columnCount} />
             ) : dateRows.map((row) => (
-              <tr key={row.date} className="border-t border-gray-100 odd:bg-white even:bg-gray-50/60 hover:bg-indigo-50/50">
+              <tr key={row.date} className="border-t border-gray-100 odd:bg-white even:bg-gray-50/60 hover:bg-emerald-50/50">
                 <td className="sticky left-0 bg-inherit px-4 py-3 font-medium text-gray-900">
                   {new Date(`${row.date}T00:00:00`).toLocaleDateString("en-IN")}
                 </td>
@@ -211,31 +211,31 @@ export function CustomerProductHistoryPage() {
                   const value = row.byProduct.get(product.id);
                   return (
                     <Fragment key={product.id}>
-                      <td className="px-3 py-3 text-right">{value ? number(value.kg) : "—"}</td>
-                      <td className="border-r border-gray-100 px-3 py-3 text-right">{value ? money(value.amount) : "—"}</td>
+                      <td className="px-3 py-3 text-right">{value ? number(value.kg) : "â€”"}</td>
+                      <td className="border-r border-gray-100 px-3 py-3 text-right">{value ? money(value.amount) : "â€”"}</td>
                     </Fragment>
                   );
                 })}
-                <td className="sticky right-28 border-l border-indigo-100 bg-indigo-50 px-3 py-3 text-right font-semibold">{number(row.kg)}</td>
-                <td className="sticky right-0 bg-indigo-50 px-3 py-3 text-right font-semibold">{money(row.amount)}</td>
+                <td className="sticky right-28 border-l border-emerald-100 bg-emerald-50 px-3 py-3 text-right font-semibold">{number(row.kg)}</td>
+                <td className="sticky right-0 bg-emerald-50 px-3 py-3 text-right font-semibold">{money(row.amount)}</td>
               </tr>
             ))}
           </tbody>
           {!loading && dateRows.length > 0 && (
             <tfoot>
-              <tr className="border-t-2 border-indigo-600 bg-indigo-100 font-semibold text-gray-900">
-                <td className="sticky left-0 bg-indigo-100 px-4 py-3">TOTAL</td>
+              <tr className="border-t-2 border-emerald-600 bg-emerald-100 font-semibold text-gray-900">
+                <td className="sticky left-0 bg-emerald-100 px-4 py-3">TOTAL</td>
                 {activeProducts.map((product) => {
                   const value = productTotals.get(product.id) ?? { kg: 0, amount: 0 };
                   return (
                     <Fragment key={product.id}>
                       <td className="px-3 py-3 text-right">{number(value.kg)}</td>
-                      <td className="border-r border-indigo-200 px-3 py-3 text-right">{money(value.amount)}</td>
+                      <td className="border-r border-emerald-200 px-3 py-3 text-right">{money(value.amount)}</td>
                     </Fragment>
                   );
                 })}
-                <td className="sticky right-28 border-l border-indigo-200 bg-indigo-100 px-3 py-3 text-right">{number(totals.kg)}</td>
-                <td className="sticky right-0 bg-indigo-100 px-3 py-3 text-right">{money(totals.amount)}</td>
+                <td className="sticky right-28 border-l border-emerald-200 bg-emerald-100 px-3 py-3 text-right">{number(totals.kg)}</td>
+                <td className="sticky right-0 bg-emerald-100 px-3 py-3 text-right">{money(totals.amount)}</td>
               </tr>
             </tfoot>
           )}

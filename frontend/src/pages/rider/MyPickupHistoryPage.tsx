@@ -1,17 +1,22 @@
-import { useEffect, useMemo, useState } from "react";
+﻿import { Fragment, useEffect, useMemo, useState } from "react";
 import { riderApi } from "../../api/rider.api";
 import { apiErrorMessage } from "../../api/client";
 import type { PickupSafe } from "../../api/types";
 
 type Period = "daily" | "weekly" | "monthly";
 
-interface HistoryRow {
-  customerId: string;
-  customerName: string;
+interface ProductRow {
   productId: string;
   productName: string;
   kg: number;
   pickups: number;
+}
+
+interface CustomerGroup {
+  customerId: string;
+  customerName: string;
+  products: ProductRow[];
+  totalKg: number;
 }
 
 function localDateValue(date = new Date()) {
@@ -80,27 +85,34 @@ export function MyPickupHistoryPage() {
       && (!productId || pickup.productId === productId);
   }), [pickups, range, customerId, productId]);
 
-  const rows = useMemo(() => {
-    const values = new Map<string, HistoryRow>();
+  const groups = useMemo(() => {
+    const map = new Map<string, Map<string, ProductRow>>();
     for (const pickup of matchingPickups) {
-      const key = `${pickup.customerId}:${pickup.productId}`;
-      const row = values.get(key) ?? {
-        customerId: pickup.customerId,
-        customerName: pickup.customer?.name ?? "Unknown customer",
-        productId: pickup.productId,
-        productName: pickup.product?.name ?? "Unknown product",
-        kg: 0,
-        pickups: 0,
-      };
+      const customerId = pickup.customerId;
+      const productId = pickup.productId;
+      if (!map.has(customerId)) map.set(customerId, new Map());
+      const products = map.get(customerId)!;
+      const row = products.get(productId) ?? { productId, productName: pickup.product?.name ?? "Unknown product", kg: 0, pickups: 0 };
       row.kg += Number(pickup.kg);
       row.pickups += 1;
-      values.set(key, row);
+      products.set(productId, row);
     }
-    return [...values.values()].sort((a, b) => a.customerName.localeCompare(b.customerName) || a.productName.localeCompare(b.productName));
+    const result: CustomerGroup[] = [];
+    for (const [customerId, products] of map) {
+      const pickup = matchingPickups.find((p) => p.customerId === customerId);
+      const sorted = [...products.values()].sort((a, b) => a.productName.localeCompare(b.productName));
+      result.push({
+        customerId,
+        customerName: pickup?.customer?.name ?? "Unknown customer",
+        products: sorted,
+        totalKg: sorted.reduce((s, p) => s + p.kg, 0),
+      });
+    }
+    return result.sort((a, b) => a.customerName.localeCompare(b.customerName));
   }, [matchingPickups]);
 
-  const totalKg = rows.reduce((sum, row) => sum + row.kg, 0);
-  const periodLabel = period === "daily" ? displayDate(range.from) : `${displayDate(range.from)} – ${displayDate(range.to)}`;
+  const totalKg = groups.reduce((sum, g) => sum + g.totalKg, 0);
+  const periodLabel = period === "daily" ? displayDate(range.from) : `${displayDate(range.from)} â€“ ${displayDate(range.to)}`;
 
   return (
     <div className="space-y-5">
@@ -132,19 +144,37 @@ export function MyPickupHistoryPage() {
 
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div><p className="font-medium text-gray-900">{periodLabel}</p><p className="text-sm text-gray-500">{matchingPickups.length} pickup{matchingPickups.length === 1 ? "" : "s"}</p></div>
-        <div className="text-right"><p className="text-xs uppercase tracking-wide text-gray-500">Total collected</p><p className="text-2xl font-bold text-indigo-700">{number(totalKg)} kg</p></div>
+        <div className="text-right"><p className="text-xs uppercase tracking-wide text-gray-500">Total collected</p><p className="text-2xl font-bold text-emerald-700">{number(totalKg)} kg</p></div>
       </div>
 
       {error && <p className="rounded bg-red-50 p-3 text-sm text-red-700">{error}</p>}
       <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white shadow-sm">
         <table className="min-w-full text-sm">
-          <thead className="bg-indigo-700 text-left text-white"><tr><th className="px-4 py-2">Customer</th><th className="px-4 py-2">Product</th><th className="px-4 py-2 text-right">Pickups</th><th className="px-4 py-2 text-right">Total quantity</th></tr></thead>
+          <thead className="bg-emerald-700 text-left text-white"><tr><th className="px-4 py-2">Customer</th><th className="px-4 py-2">Product</th><th className="px-4 py-2 text-right">Pickups</th><th className="px-4 py-2 text-right">Quantity</th></tr></thead>
           <tbody>
-            {loading ? <Empty text="Loading history..." /> : rows.length === 0 ? <Empty text="No pickups found for this period and filters." /> : rows.map((row) => (
-              <tr key={`${row.customerId}:${row.productId}`} className="border-t border-gray-100 hover:bg-gray-50"><td className="px-4 py-2 font-medium text-gray-900">{row.customerName}</td><td className="px-4 py-2">{row.productName}</td><td className="px-4 py-2 text-right">{row.pickups}</td><td className="px-4 py-2 text-right font-medium">{number(row.kg)} kg</td></tr>
+            {loading ? <Empty text="Loading history..." /> : groups.length === 0 ? <Empty text="No pickups found for this period and filters." /> : groups.map((group) => (
+              <Fragment key={group.customerId}>
+                {group.products.map((product, pIdx) => (
+                  <tr key={product.productId} className="border-t border-gray-100 hover:bg-gray-50">
+                    {pIdx === 0 && (
+                      <td className="px-4 py-2 font-medium text-gray-900" rowSpan={group.products.length}>
+                        {group.customerName}
+                      </td>
+                    )}
+                    <td className="px-4 py-2">{product.productName}</td>
+                    <td className="px-4 py-2 text-right">{product.pickups}</td>
+                    <td className="px-4 py-2 text-right font-medium">{number(product.kg)} kg</td>
+                  </tr>
+                ))}
+                <tr className="bg-emerald-50 text-sm font-semibold">
+                  <td colSpan={2} className="px-4 py-2 text-emerald-800">Subtotal — {group.customerName}</td>
+                  <td className="px-4 py-2 text-right text-emerald-800">{group.products.reduce((s, p) => s + p.pickups, 0)}</td>
+                  <td className="px-4 py-2 text-right text-emerald-800">{number(group.totalKg)} kg</td>
+                </tr>
+              </Fragment>
             ))}
           </tbody>
-          {!loading && rows.length > 0 && <tfoot><tr className="border-t-2 border-indigo-700 bg-indigo-50 font-semibold"><td colSpan={2} className="px-4 py-3">TOTAL</td><td className="px-4 py-3 text-right">{matchingPickups.length}</td><td className="px-4 py-3 text-right">{number(totalKg)} kg</td></tr></tfoot>}
+          {!loading && groups.length > 0 && <tfoot><tr className="border-t-2 border-emerald-700 bg-emerald-50 font-semibold"><td colSpan={2} className="px-4 py-3">TOTAL</td><td className="px-4 py-3 text-right">{matchingPickups.length}</td><td className="px-4 py-3 text-right">{number(totalKg)} kg</td></tr></tfoot>}
         </table>
       </div>
     </div>

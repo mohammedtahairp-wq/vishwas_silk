@@ -214,7 +214,7 @@ export function DashboardHome() {
               value={inrCurrency(stats.revenueThisMonth)}
               hint={`${Math.round(stats.kgThisMonth)} kg collected`}
               icon={
-                <div className="w-11 h-11 rounded-xl flex items-center justify-center" style={{ background: "linear-gradient(135deg, #4f46e5, #7c3aed)" }}>
+                <div className="w-11 h-11 rounded-xl flex items-center justify-center" style={{ background: "linear-gradient(135deg, #059669, #10b981)" }}>
                   <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
@@ -323,7 +323,7 @@ function Header({
   onToDate: (v: string) => void;
 }) {
   const inputClass =
-    "rounded-xl border border-gray-200 bg-white/80 backdrop-blur-sm px-3 py-2 text-sm font-medium text-gray-800 shadow-sm transition-all duration-200 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-100";
+    "rounded-xl border border-gray-200 bg-white/80 backdrop-blur-sm px-3 py-2 text-sm font-medium text-gray-800 shadow-sm transition-all duration-200 focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-100";
   return (
     <motion.div
       initial={{ opacity: 0, y: -10 }}
@@ -332,7 +332,7 @@ function Header({
       className="flex flex-wrap items-end justify-between gap-4"
     >
       <div>
-        <h1 className="text-2xl font-bold tracking-tight" style={{ color: "#1e1b4b" }}>
+        <h1 className="text-2xl font-bold tracking-tight" style={{ color: "#064e3b" }}>
           Dashboard
         </h1>
         <p className="mt-1 text-sm text-gray-500">Overview of pickups, revenue and settlements.</p>
@@ -390,7 +390,7 @@ function KpiCard({ label, value, hint, icon, accent = false }: { label: string; 
       <div className="flex items-start justify-between">
         <div className="flex-1 min-w-0">
           <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">{label}</p>
-          <p className={`mt-2 text-2xl font-bold tracking-tight tabular-nums ${accent ? "text-indigo-600" : ""}`} style={!accent ? { color: "#1e1b4b" } : undefined}>
+          <p className={`mt-2 text-2xl font-bold tracking-tight tabular-nums ${accent ? "text-emerald-600" : ""}`} style={!accent ? { color: "#064e3b" } : undefined}>
             {value}
           </p>
           {hint && <p className="mt-1 text-xs text-gray-400 font-medium">{hint}</p>}
@@ -410,7 +410,7 @@ function Card({ title, subtitle, children, className = "" }: { title: string; su
       style={{ boxShadow: "0 1px 3px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.03)" }}
     >
       <div className="mb-5">
-        <h2 className="text-base font-bold" style={{ color: "#1e1b4b" }}>{title}</h2>
+        <h2 className="text-base font-bold" style={{ color: "#064e3b" }}>{title}</h2>
         {subtitle && <p className="text-xs font-medium text-gray-400 mt-0.5">{subtitle}</p>}
       </div>
       {children}

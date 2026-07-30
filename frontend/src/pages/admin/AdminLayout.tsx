@@ -8,6 +8,7 @@ const navItems = [
   { to: "/admin/cities", label: "Cities" },
   { to: "/admin/products", label: "Products" },
   { to: "/admin/pricing", label: "Pricing" },
+  { to: "/admin/log-pickup", label: "Log Pickup" },
   { to: "/admin/pickups", label: "Pickups" },
   { to: "/admin/grand-total", label: "Grand Total" },
   { to: "/admin/settlements", label: "Settlements" },

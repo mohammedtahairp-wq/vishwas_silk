@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
 import { adminApi } from "../../api/admin.api";
 import type { Customer, Price, Product } from "../../api/types";
@@ -59,7 +59,7 @@ export function PricingPage() {
         </div>
 
           <>
-            <div className={`rounded p-3 text-sm ${scope === "global" ? "bg-indigo-50 text-indigo-800" : "bg-amber-50 text-amber-800"}`}>
+            <div className={`rounded p-3 text-sm ${scope === "global" ? "bg-emerald-50 text-emerald-800" : "bg-amber-50 text-amber-800"}`}>
               {scope === "global" ? "This is the default price used for every customer without an override." : "This customer-specific price overrides the global price for the selected product."}
             </div>
             <form onSubmit={handleSetPrice} className="grid grid-cols-1 md:grid-cols-4 gap-3 items-end">
@@ -92,7 +92,7 @@ export function PricingPage() {
                 onChange={(e) => setEffectiveFrom(e.target.value)}
                 required
               />
-              <button type="submit" className="bg-indigo-600 hover:bg-indigo-700 text-white rounded px-4 py-1.5 font-medium">
+              <button type="submit" className="bg-emerald-600 hover:bg-emerald-700 text-white rounded px-4 py-1.5 font-medium">
                 Set {scope === "global" ? "global" : "customer"} price
               </button>
             </form>
@@ -110,7 +110,7 @@ export function PricingPage() {
                 {prices.map((p) => (
                   <tr key={p.id} className="border-t border-gray-100">
                     <td className="py-1">{p.product?.name}</td>
-                    <td className="py-1">₹{p.pricePerKg}</td>
+                    <td className="py-1">{p.pricePerKg}</td>
                     <td className="py-1">{new Date(p.effectiveFrom).toLocaleDateString()}</td>
                   </tr>
                 ))}

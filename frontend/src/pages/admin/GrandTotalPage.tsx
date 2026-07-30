@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+﻿import { useEffect, useMemo, useState } from "react";
 import { adminApi } from "../../api/admin.api";
 import { apiErrorMessage } from "../../api/client";
 import type { Customer, PickupAdmin, Product, Rider } from "../../api/types";
@@ -148,7 +148,7 @@ export function GrandTotalPage() {
         </div>
         <div className="text-right">
           <p className="text-xs font-medium uppercase tracking-wide text-gray-500">Filtered grand total</p>
-          <p className="text-2xl font-bold text-indigo-700">{money(totals.amount)}</p>
+          <p className="text-2xl font-bold text-emerald-700">{money(totals.amount)}</p>
         </div>
       </div>
 
@@ -164,8 +164,8 @@ export function GrandTotalPage() {
       </div>
 
       <div className="flex flex-wrap justify-between gap-2 text-sm text-gray-500">
-        <span>{rows.length} day{rows.length === 1 ? "" : "s"} · {filtered.length} pickup{filtered.length === 1 ? "" : "s"}</span>
-        <span>{from && to ? `${displayDate(from)} – ${displayDate(to)}` : "All dates"}</span>
+        <span>{rows.length} day{rows.length === 1 ? "" : "s"} Â· {filtered.length} pickup{filtered.length === 1 ? "" : "s"}</span>
+        <span>{from && to ? `${displayDate(from)} â€“ ${displayDate(to)}` : "All dates"}</span>
       </div>
       {error && <p className="rounded bg-red-50 p-3 text-sm text-red-700">{error}</p>}
 
@@ -185,7 +185,7 @@ export function GrandTotalPage() {
             {loading ? <EmptyRow columns={2 + visibleProducts.length * 3} text="Loading grand totals..." />
               : rows.length === 0 ? <EmptyRow columns={2 + visibleProducts.length * 3} text="No pickups match these filters." />
               : rows.map((row) => (
-                <tr key={row.date} className="border-t border-gray-200 hover:bg-indigo-50/40">
+                <tr key={row.date} className="border-t border-gray-200 hover:bg-emerald-50/40">
                   <td className="border-r border-gray-200 bg-slate-50 px-3 py-2 text-right font-semibold">{money(row.amount)}</td>
                   <td className="border-r border-gray-200 px-3 py-2 font-medium">{displayDate(row.date)}</td>
                   {visibleProducts.map((product) => <ProductCells key={product.id} value={row.products[product.id]} />)}
@@ -214,7 +214,7 @@ function ProductCells({ value, footer = false }: { value?: ProductTotal; footer?
   const qty = value?.qty ?? 0;
   const amount = value?.amount ?? 0;
   const cell = footer ? "border-slate-600" : "border-gray-200";
-  return <><td className={`px-3 py-2 text-right ${!value ? "text-gray-300" : ""}`}>{value ? number(qty) : "—"}</td><td className="px-3 py-2 text-right">{value ? number(amount) : "—"}</td><td className={`border-r px-3 py-2 text-right ${cell}`}>{value && qty ? number(amount / qty) : "—"}</td></>;
+  return <><td className={`px-3 py-2 text-right ${!value ? "text-gray-300" : ""}`}>{value ? number(qty) : "â€”"}</td><td className="px-3 py-2 text-right">{value ? number(amount) : "â€”"}</td><td className={`border-r px-3 py-2 text-right ${cell}`}>{value && qty ? number(amount / qty) : "â€”"}</td></>;
 }
 
 function EmptyRow({ columns, text }: { columns: number; text: string }) {

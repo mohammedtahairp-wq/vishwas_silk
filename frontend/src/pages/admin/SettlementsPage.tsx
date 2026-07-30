@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
 import { adminApi } from "../../api/admin.api";
 import type { Customer, Transaction } from "../../api/types";
@@ -25,7 +25,7 @@ export function SettlementsPage() {
     try {
       const transaction = await adminApi.generateSettlement({ customer_id: customerId, month, year });
       setSettlements((prev) => [transaction, ...prev]);
-      setMessage(`Settlement generated: ₹${transaction.totalAmount} for ${transaction.totalKg}kg`);
+      setMessage(`Settlement generated: â‚¹${transaction.totalAmount} for ${transaction.totalKg}kg`);
     } catch {
       setError("Could not generate settlement (no unsettled pickups, or already settled for this month)");
     }
@@ -64,7 +64,7 @@ export function SettlementsPage() {
             value={year}
             onChange={(e) => setYear(Number(e.target.value))}
           />
-          <button type="submit" className="bg-indigo-600 hover:bg-indigo-700 text-white rounded px-4 py-1.5 font-medium">
+          <button type="submit" className="bg-emerald-600 hover:bg-emerald-700 text-white rounded px-4 py-1.5 font-medium">
             Generate settlement
           </button>
         </form>
@@ -98,12 +98,12 @@ export function SettlementsPage() {
                     {s.month}/{s.year}
                   </td>
                   <td className="px-4 py-2">{s.totalKg}</td>
-                  <td className="px-4 py-2">₹{s.totalAmount}</td>
+                  <td className="px-4 py-2">â‚¹{s.totalAmount}</td>
                   <td className="px-4 py-2 capitalize">{s.status}</td>
-                  <td className="px-4 py-2">{s.paidDate ? new Date(s.paidDate).toLocaleDateString() : "—"}</td>
+                  <td className="px-4 py-2">{s.paidDate ? new Date(s.paidDate).toLocaleDateString() : "â€”"}</td>
                   <td className="px-4 py-2">
                     {s.status === "pending" && (
-                      <button onClick={() => handleMarkPaid(s.id)} className="text-indigo-600 hover:underline">
+                      <button onClick={() => handleMarkPaid(s.id)} className="text-emerald-600 hover:underline">
                         Mark paid
                       </button>
                     )}

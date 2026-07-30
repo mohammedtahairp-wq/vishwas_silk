@@ -7,5 +7,5 @@ const navItems = [
 ];
 
 export function RiderLayout() {
-  return <PortalLayout title="Rider — VISHWAS SILK" navItems={navItems} />;
+  return <PortalLayout title="Rider Portal" navItems={navItems} mobileNav="bottom" />;
 }

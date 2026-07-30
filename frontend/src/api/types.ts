@@ -59,6 +59,8 @@ export interface CreateCustomerResult {
   customer: Customer;
   username: string | null;
 }
+
+export interface Pickup {
   id: string;
   customerId: string;
   riderId: string;
@@ -72,6 +74,8 @@ export interface CreateCustomerResult {
   rider?: Rider;
   product?: Product;
 }
+
+export type PickupAdmin = Pickup;
 
 export interface PickupSafe {
   id: string;

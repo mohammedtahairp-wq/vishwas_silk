@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+﻿import { useEffect, useMemo, useState } from "react";
 import { customerApi } from "../../api/customer.api";
 import type { PickupSafe } from "../../api/types";
 
@@ -50,7 +50,7 @@ export function MyPickupsPage() {
             key={t}
             onClick={() => setTab(t)}
             className={`px-3 py-1.5 rounded text-sm capitalize ${
-              tab === t ? "bg-indigo-600 text-white" : "bg-white border border-gray-200 text-gray-600"
+              tab === t ? "bg-emerald-600 text-white" : "bg-white border border-gray-200 text-gray-600"
             }`}
           >
             {t === "product" ? "By Product" : t}

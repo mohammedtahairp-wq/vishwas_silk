@@ -1,12 +1,13 @@
-﻿import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
-import { useSearchParams } from "react-router-dom";
-import { riderApi } from "../../api/rider.api";
-import type { Customer, CustomerProduct } from "../../api/types";
+import { adminApi } from "../../api/admin.api";
+import type { Customer, CustomerProduct, Rider } from "../../api/types";
+import { apiErrorMessage } from "../../api/client";
 
-export function LogPickupPage() {
-  const [searchParams] = useSearchParams();
+export function AdminLogPickupPage() {
   const [customers, setCustomers] = useState<Customer[]>([]);
+  const [riders, setRiders] = useState<Rider[]>([]);
+  const [selectedRiderId, setSelectedRiderId] = useState("");
   const [filteredCustomers, setFilteredCustomers] = useState<Customer[]>([]);
   const [search, setSearch] = useState("");
   const [showDropdown, setShowDropdown] = useState(false);
@@ -18,18 +19,13 @@ export function LogPickupPage() {
   const [message, setMessage] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const initialSelectDone = useRef(false);
 
   useEffect(() => {
-    riderApi.myCustomers().then((rows) => {
-      setCustomers(rows);
-      setFilteredCustomers(rows);
-      const customerId = searchParams.get("customerId");
-      if (customerId && !initialSelectDone.current) {
-        initialSelectDone.current = true;
-        const match = rows.find((c) => c.id === customerId);
-        if (match) selectCustomer(match);
-      }
+    Promise.all([adminApi.listCustomers(), adminApi.listRiders()]).then(([customerRows, riderRows]) => {
+      const activeCustomers = customerRows.filter((c) => c.status === "active");
+      setCustomers(activeCustomers);
+      setFilteredCustomers(activeCustomers);
+      setRiders(riderRows.filter((r) => r.status === "active"));
     });
   }, []);
 
@@ -66,8 +62,15 @@ export function LogPickupPage() {
     setKgValues({});
     setLoadingProducts(true);
     try {
-      const customerProducts = await riderApi.customerProducts(customer.id);
-      setProducts(customerProducts);
+      const customerProducts = await adminApi.priceHistory(customer.id);
+      const products = customerProducts.map((p) => ({
+        productId: p.productId,
+        productName: p.product?.name ?? "Unknown",
+        productUnit: p.product?.unit ?? "kg",
+        pricePerKg: p.pricePerKg,
+        effectiveFrom: p.effectiveFrom,
+      }));
+      setProducts(products);
     } catch {
       setProducts([]);
       setError("Could not load products for this customer.");
@@ -91,7 +94,10 @@ export function LogPickupPage() {
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    if (!selectedCustomer) return;
+    if (!selectedCustomer || !selectedRiderId) {
+      setError("Select a customer and a rider.");
+      return;
+    }
     const items = Object.entries(kgValues)
       .filter(([, kg]) => kg && Number(kg) > 0)
       .map(([productId, kg]) => ({ product_id: productId, kg: Number(kg) }));
@@ -100,14 +106,13 @@ export function LogPickupPage() {
     setMessage(null);
     setSubmitting(true);
     try {
-      await riderApi.logBatchPickup({ customer_id: selectedCustomer.id, items });
+      await adminApi.createBatchPickups({ customer_id: selectedCustomer.id, rider_id: selectedRiderId, items });
+      setMessage("Pickup logged successfully!");
+      setKgValues({});
       setSelectedCustomer(null);
       setSearch("");
-      setProducts([]);
-      setKgValues({});
-      setMessage("Pickup logged successfully!");
-    } catch {
-      setError("Could not log pickup. Please try again.");
+    } catch (err) {
+      setError(apiErrorMessage(err, "Could not log pickup."));
     } finally {
       setSubmitting(false);
     }
@@ -119,11 +124,23 @@ export function LogPickupPage() {
         <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-100 text-lg text-emerald-700">+</div>
         <div>
           <h1 className="text-xl font-bold text-gray-900">Log Pickup</h1>
-          <p className="text-sm text-gray-500">Record collection from a customer</p>
+          <p className="text-sm text-gray-500">Record a collection for a customer</p>
         </div>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-5">
+        <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+          <label className="mb-1.5 block text-sm font-semibold text-gray-700">Rider</label>
+          <select
+            className="w-full rounded-lg border border-gray-300 px-4 py-3 text-base"
+            value={selectedRiderId}
+            onChange={(e) => setSelectedRiderId(e.target.value)}
+          >
+            <option value="">Select a rider...</option>
+            {riders.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
+          </select>
+        </div>
+
         <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
           <label className="mb-1.5 block text-sm font-semibold text-gray-700">Select Customer</label>
           <div ref={dropdownRef} className="relative">
@@ -149,7 +166,7 @@ export function LogPickupPage() {
                     </span>
                     <div className="flex-1">
                       <p className="text-gray-900">{c.name}</p>
-                      <p className="text-xs text-gray-500">{c.serialNumber ?? ""}{c.serialNumber && c.villageArea ? " Â· " : ""}{c.villageArea ?? ""}</p>
+                      <p className="text-xs text-gray-500">{c.serialNumber ?? ""}{c.serialNumber && c.villageArea ? " · " : ""}{c.villageArea ?? ""}</p>
                     </div>
                     <span className="text-xs text-gray-400">{c.phone}</span>
                   </button>
@@ -160,7 +177,7 @@ export function LogPickupPage() {
 
           {selectedCustomer && !loadingProducts && products.length === 0 && (
             <p className="mt-3 rounded-lg bg-amber-50 p-3 text-sm text-amber-800">
-              No products have been assigned to this customer yet. Ask the admin to add products and rates.
+              No products have been assigned to this customer yet. Set a price first.
             </p>
           )}
         </div>
@@ -175,7 +192,7 @@ export function LogPickupPage() {
         {selectedCustomer && products.length > 0 && (
           <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
             <div className="mb-3 flex items-center gap-2">
-              <div className="flex h-6 w-6 items-center justify-center rounded-full bg-green-100 text-xs text-green-700">âœ“</div>
+              <div className="flex h-6 w-6 items-center justify-center rounded-full bg-green-100 text-xs text-green-700">✓</div>
               <h2 className="text-sm font-semibold text-gray-700">
                 Enter collection for {selectedCustomer.name}
               </h2>
@@ -188,6 +205,7 @@ export function LogPickupPage() {
                 >
                   <div className="flex min-w-0 flex-1 items-center gap-2">
                     <span className="text-lg font-bold text-gray-900">{p.productName}</span>
+                    <span className="text-xs text-gray-400">@ ₹{Number(p.pricePerKg).toFixed(2)}/kg</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <input
@@ -208,20 +226,16 @@ export function LogPickupPage() {
         )}
 
         {message && (
-          <div className="rounded-lg bg-green-50 p-4 text-center text-base font-medium text-green-700">
-            {message}
-          </div>
+          <div className="rounded-lg bg-green-50 p-4 text-center text-base font-medium text-green-700">{message}</div>
         )}
 
         {error && (
-          <div className="rounded-lg bg-red-50 p-4 text-center text-base font-medium text-red-700">
-            {error}
-          </div>
+          <div className="rounded-lg bg-red-50 p-4 text-center text-base font-medium text-red-700">{error}</div>
         )}
 
         <button
           type="submit"
-          disabled={submitting || !selectedCustomer || products.length === 0}
+          disabled={submitting || !selectedCustomer || !selectedRiderId || products.length === 0}
           className="w-full rounded-xl bg-emerald-600 px-6 py-4 text-lg font-bold text-white shadow-lg hover:bg-emerald-700 disabled:opacity-40 disabled:shadow-none"
         >
           {submitting ? "Saving..." : "Submit Collection"}

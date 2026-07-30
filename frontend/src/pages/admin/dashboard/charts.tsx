@@ -53,11 +53,11 @@ export function ColumnChart({
       <svg viewBox={`0 0 ${W} ${H}`} className="w-full" role="img" aria-label="Revenue by month">
         <defs>
           <linearGradient id="barGrad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#818cf8" />
-            <stop offset="100%" stopColor="#4f46e5" />
+            <stop offset="0%" stopColor="#34d399" />
+            <stop offset="100%" stopColor="#059669" />
           </linearGradient>
           <filter id="barShadow">
-            <feDropShadow dx="0" dy="2" stdDeviation="3" floodColor="#4f46e5" floodOpacity="0.2" />
+            <feDropShadow dx="0" dy="2" stdDeviation="3" floodColor="#059669" floodOpacity="0.2" />
           </filter>
         </defs>
 
@@ -126,12 +126,12 @@ export function ColumnChart({
           style={{
             left: `${((x(active) + barW / 2) / W) * 100}%`,
             top: `${(y(data[active].value) / H) * 100 - 4}%`,
-            background: "linear-gradient(135deg, #1e1b4b, #312e81)",
-            boxShadow: "0 8px 24px rgba(30, 27, 75, 0.3)",
+            background: "linear-gradient(135deg, #064e3b, #065f46)",
+            boxShadow: "0 8px 24px rgba(6, 78, 59, 0.3)",
           }}
         >
           <div className="font-bold">{data[active].label}</div>
-          <div className="tabular-nums text-indigo-200 font-semibold">
+          <div className="tabular-nums text-emerald-200 font-semibold">
             {prefix}
             {valueFormat(data[active].value)}
           </div>
@@ -199,10 +199,10 @@ export function BarList({
                   onItemClick(d.label);
                 }
               } : undefined}
-              className={onItemClick ? "cursor-pointer rounded-xl p-1.5 -m-1.5 hover:bg-indigo-50/60 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-indigo-300" : undefined}
+              className={onItemClick ? "cursor-pointer rounded-xl p-1.5 -m-1.5 hover:bg-emerald-50/60 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-emerald-300" : undefined}
             >
               <div className="mb-1.5 flex items-baseline justify-between gap-3 text-sm">
-                <span className={`truncate font-semibold ${onItemClick ? "text-gray-600 group-hover:text-indigo-600" : "text-gray-700"}`} style={{ color: !onItemClick ? "#334155" : undefined }}>
+                <span className={`truncate font-semibold ${onItemClick ? "text-gray-600 group-hover:text-emerald-600" : "text-gray-700"}`} style={{ color: !onItemClick ? "#334155" : undefined }}>
                   {d.label}
                 </span>
                 <span className="shrink-0 tabular-nums text-gray-400 font-medium">
@@ -260,11 +260,11 @@ export function Donut({
         <svg viewBox="0 0 128 128" className="h-36 w-36 shrink-0 -rotate-90">
           <defs>
             <linearGradient id="donutGrad" x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0%" stopColor="#818cf8" />
-              <stop offset="100%" stopColor="#4f46e5" />
+              <stop offset="0%" stopColor="#34d399" />
+              <stop offset="100%" stopColor="#059669" />
             </linearGradient>
             <filter id="donutShadow">
-              <feDropShadow dx="0" dy="2" stdDeviation="4" floodColor="#4f46e5" floodOpacity="0.25" />
+              <feDropShadow dx="0" dy="2" stdDeviation="4" floodColor="#059669" floodOpacity="0.25" />
             </filter>
           </defs>
           <circle cx={64} cy={64} r={R} fill="none" stroke="#f1f5f9" strokeWidth={14} />
@@ -291,7 +291,7 @@ export function Donut({
             transform="rotate(90 64 64)"
             fontSize={24}
             fontWeight={800}
-            fill="#1e1b4b"
+            fill="#064e3b"
             fontFamily="system-ui"
           >
             {Math.round(pct * 100)}%
@@ -300,9 +300,9 @@ export function Donut({
       </div>
       <div className="space-y-3 text-sm">
         <div className="flex items-center gap-3">
-          <span className="h-3 w-3 rounded-full" style={{ background: "linear-gradient(135deg, #818cf8, #4f46e5)" }} />
+          <span className="h-3 w-3 rounded-full" style={{ background: "linear-gradient(135deg, #34d399, #059669)" }} />
           <span className="text-gray-600 font-medium">
-            {label} <span className="font-bold tabular-nums" style={{ color: "#1e1b4b" }}>{value}</span>
+            {label} <span className="font-bold tabular-nums" style={{ color: "#064e3b" }}>{value}</span>
           </span>
         </div>
         <div className="flex items-center gap-3">

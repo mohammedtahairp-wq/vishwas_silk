@@ -27,12 +27,12 @@ export function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center relative overflow-hidden" style={{ background: "linear-gradient(135deg, #f1f5f9 0%, #e0e7ff 50%, #ede9fe 100%)" }}>
+    <div className="min-h-screen flex items-center justify-center relative overflow-hidden" style={{ background: "linear-gradient(135deg, #f1f5f9 0%, #d1fae5 50%, #ecfdf5 100%)" }}>
       {/* Background decorations */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-40 -right-40 w-80 h-80 rounded-full opacity-30" style={{ background: "linear-gradient(135deg, #818cf8, #c084fc)" }} />
-        <div className="absolute -bottom-40 -left-40 w-96 h-96 rounded-full opacity-20" style={{ background: "linear-gradient(135deg, #a78bfa, #6366f1)" }} />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full opacity-10" style={{ background: "radial-gradient(circle, #6366f1, transparent)" }} />
+        <div className="absolute -top-40 -right-40 w-80 h-80 rounded-full opacity-30" style={{ background: "linear-gradient(135deg, #34d399, #6ee7b7)" }} />
+        <div className="absolute -bottom-40 -left-40 w-96 h-96 rounded-full opacity-20" style={{ background: "linear-gradient(135deg, #6ee7b7, #10b981)" }} />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full opacity-10" style={{ background: "radial-gradient(circle, #10b981, transparent)" }} />
       </div>
 
       <motion.div
@@ -41,7 +41,7 @@ export function LoginPage() {
         transition={{ duration: 0.6, ease: [0.4, 0, 0.2, 1] }}
         className="w-full max-w-md mx-4 relative z-10"
       >
-        <div className="rounded-3xl border border-white/60 p-8 md:p-10" style={{ background: "rgba(255,255,255,0.8)", backdropFilter: "blur(24px)", WebkitBackdropFilter: "blur(24px)", boxShadow: "0 8px 32px rgba(99, 102, 241, 0.1), 0 1px 3px rgba(0,0,0,0.05)" }}>
+        <div className="rounded-3xl border border-white/60 p-8 md:p-10" style={{ background: "rgba(255,255,255,0.8)", backdropFilter: "blur(24px)", WebkitBackdropFilter: "blur(24px)", boxShadow: "0 8px 32px rgba(16, 185, 129, 0.1), 0 1px 3px rgba(0,0,0,0.05)" }}>
           {/* Logo */}
           <motion.div
             initial={{ scale: 0.8, opacity: 0 }}
@@ -49,9 +49,7 @@ export function LoginPage() {
             transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
             className="flex justify-center mb-6"
           >
-            <div className="w-16 h-16 rounded-2xl flex items-center justify-center text-white font-black text-xl shadow-lg" style={{ background: "linear-gradient(135deg, #4f46e5, #7c3aed)", boxShadow: "0 8px 24px rgba(79, 70, 229, 0.4)" }}>
-              VS
-            </div>
+            <img src="/logo.jpeg" alt="VISHWAS SILK" className="h-24 w-auto" />
           </motion.div>
 
           <motion.div
@@ -60,7 +58,7 @@ export function LoginPage() {
             transition={{ delay: 0.3 }}
             className="text-center mb-8"
           >
-            <h1 className="text-2xl font-bold tracking-tight" style={{ color: "#1e1b4b" }}>VISHWAS SILK</h1>
+            <h1 className="text-2xl font-bold tracking-tight" style={{ color: "#064e3b" }}>VISHWAS SILK</h1>
             <p className="text-sm text-gray-500 mt-1 font-medium">Sign in to your account</p>
           </motion.div>
 
@@ -72,7 +70,7 @@ export function LoginPage() {
             >
               <label className="block text-xs font-bold uppercase tracking-wider text-gray-400 mb-2">Username</label>
               <input
-                className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:border-indigo-400 transition-all duration-200"
+                className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-emerald-200 focus:border-emerald-400 transition-all duration-200"
                 style={{ background: "rgba(255,255,255,0.7)" }}
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
@@ -89,7 +87,7 @@ export function LoginPage() {
               <label className="block text-xs font-bold uppercase tracking-wider text-gray-400 mb-2">Password</label>
               <input
                 type="password"
-                className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:border-indigo-400 transition-all duration-200"
+                className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-emerald-200 focus:border-emerald-400 transition-all duration-200"
                 style={{ background: "rgba(255,255,255,0.7)" }}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
@@ -116,7 +114,7 @@ export function LoginPage() {
               type="submit"
               disabled={submitting}
               className="w-full text-white rounded-xl py-3 font-bold text-sm tracking-wide disabled:opacity-50 transition-all duration-200"
-              style={{ background: "linear-gradient(135deg, #4f46e5, #7c3aed)", boxShadow: "0 4px 16px rgba(79, 70, 229, 0.35)" }}
+              style={{ background: "linear-gradient(135deg, #059669, #10b981)", boxShadow: "0 4px 16px rgba(5, 150, 105, 0.35)" }}
             >
               {submitting ? (
                 <span className="flex items-center justify-center gap-2">

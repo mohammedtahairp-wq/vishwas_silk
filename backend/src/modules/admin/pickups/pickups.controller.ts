@@ -1,4 +1,5 @@
 import { Request, Response } from "express";
+import { z } from "zod";
 import * as pickupsService from "./pickups.service";
 import { serializePickups } from "../../../serializers/pickup.serializer";
 
@@ -22,4 +23,55 @@ export async function listPickupsHandler(req: Request, res: Response) {
   });
   // Admin role — serializer returns full rows including price/amount.
   res.json(serializePickups(pickups, req.user!.role));
+}
+
+const batchPickupSchema = z.object({
+  customer_id: z.string().uuid(),
+  rider_id: z.string().uuid(),
+  items: z.array(z.object({
+    product_id: z.string().uuid(),
+    kg: z.number().positive(),
+  })).min(1),
+  pickup_date: z
+    .string()
+    .refine((v) => !Number.isNaN(Date.parse(v)), "Invalid date")
+    .optional(),
+});
+
+const updatePickupSchema = z.object({
+  customer_id: z.string().uuid(),
+  rider_id: z.string().uuid(),
+  product_id: z.string().uuid(),
+  kg: z.number().positive(),
+  pickup_date: z
+    .string()
+    .refine((v) => !Number.isNaN(Date.parse(v)), "Invalid date"),
+});
+
+export async function createBatchPickupHandler(req: Request, res: Response) {
+  const body = batchPickupSchema.parse(req.body);
+
+  const pickups = await pickupsService.createBatchPickups({
+    customerId: body.customer_id,
+    riderId: body.rider_id,
+    items: body.items.map((item) => ({ productId: item.product_id, kg: item.kg })),
+    pickupDate: body.pickup_date ? new Date(body.pickup_date) : undefined,
+  });
+
+  res.status(201).json(serializePickups(pickups, "admin"));
+}
+
+export async function updatePickupHandler(req: Request, res: Response) {
+  const { id } = req.params;
+  const body = updatePickupSchema.parse(req.body);
+
+  const pickup = await pickupsService.updatePickup(id, {
+    customerId: body.customer_id,
+    riderId: body.rider_id,
+    productId: body.product_id,
+    kg: body.kg,
+    pickupDate: new Date(body.pickup_date),
+  });
+
+  res.json(serializePickups([pickup], "admin")[0]);
 }

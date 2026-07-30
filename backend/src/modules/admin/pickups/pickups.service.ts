@@ -99,6 +99,36 @@ export async function createBatchPickups(input: CreateBatchPickupsInput) {
   });
 }
 
+export async function updatePickup(id: string, input: {
+  customerId: string;
+  riderId: string;
+  productId: string;
+  kg: number;
+  pickupDate: Date;
+}) {
+  const price = await pricingService.currentPriceFor(input.customerId, input.productId, input.pickupDate);
+  if (!price) {
+    throw new NotFoundError("No price set for this customer and product — ask admin to set a price/kg first");
+  }
+
+  const pricePerKgSnapshot = Number(price.pricePerKg);
+  const amount = Number((input.kg * pricePerKgSnapshot).toFixed(2));
+
+  return prisma.pickup.update({
+    where: { id },
+    data: {
+      customerId: input.customerId,
+      riderId: input.riderId,
+      productId: input.productId,
+      kg: input.kg,
+      pickupDate: input.pickupDate,
+      pricePerKgSnapshot,
+      amount,
+    },
+    include: { customer: true, rider: true, product: true },
+  });
+}
+
 export async function priceAvailable(customerId: string, productId: string) {
   return Boolean(await pricingService.currentPriceFor(customerId, productId));
 }
