@@ -10,16 +10,6 @@ import { customerRouter } from "./modules/customer/customer.routes";
 import { sharedProductsRouter } from "./modules/shared/products.routes";
 import { errorHandler } from "./middleware/errorHandler";
 
-const ALLOWED_ORIGINS = [
-  "http://localhost:5173",
-  "http://localhost",
-  "https://localhost",
-  "capacitor://localhost",
-  "http://vishwas-silk-frontend.s3-website.ap-south-1.amazonaws.com",
-  "https://3.110.170.133",
-  "https://manage.vishwassilk.com",
-];
-
 export const app = express();
 
 app.set("trust proxy", 1);
@@ -27,7 +17,7 @@ app.use(helmet());
 app.use(
   cors({
     origin: (origin, callback) => {
-      if (!origin || ALLOWED_ORIGINS.includes(origin)) {
+      if (!origin || origin.startsWith("http://") || origin.startsWith("https://") || origin.startsWith("capacitor://")) {
         callback(null, true);
       } else {
         callback(new Error("Not allowed by CORS"));
@@ -41,7 +31,7 @@ app.use(express.json({ limit: "10kb" }));
 
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 10,
+  max: 50,
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: "Too many login attempts. Please try again after 15 minutes." },

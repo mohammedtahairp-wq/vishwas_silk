@@ -3,6 +3,7 @@ import type { FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useAuth } from "../auth/AuthContext";
+import { apiErrorMessage } from "../api/client";
 
 export function LoginPage() {
   const { login } = useAuth();
@@ -19,8 +20,8 @@ export function LoginPage() {
     try {
       const role = await login(username, password);
       navigate(`/${role}`, { replace: true });
-    } catch {
-      setError("Invalid username or password");
+    } catch (err) {
+      setError(apiErrorMessage(err, "Invalid username or password"));
     } finally {
       setSubmitting(false);
     }
