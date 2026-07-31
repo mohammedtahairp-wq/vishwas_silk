@@ -13,4 +13,6 @@ backend/prisma/*.xlsx
 .DS_Store
 *.pem
 *.csv
+*.apk
+*.tsbuildinfo
 frontend/android/
