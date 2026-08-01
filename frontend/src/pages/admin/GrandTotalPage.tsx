@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { adminApi } from "../../api/admin.api";
 import { apiErrorMessage } from "../../api/client";
 import type { Customer, PickupAdmin, Product, Rider } from "../../api/types";
@@ -164,8 +164,8 @@ export function GrandTotalPage() {
       </div>
 
       <div className="flex flex-wrap justify-between gap-2 text-sm text-gray-500">
-        <span>{rows.length} day{rows.length === 1 ? "" : "s"} Â· {filtered.length} pickup{filtered.length === 1 ? "" : "s"}</span>
-        <span>{from && to ? `${displayDate(from)} â€“ ${displayDate(to)}` : "All dates"}</span>
+        <span>{rows.length} day{rows.length === 1 ? "" : "s"} · {filtered.length} pickup{filtered.length === 1 ? "" : "s"}</span>
+        <span>{from && to ? `${displayDate(from)} – ${displayDate(to)}` : "All dates"}</span>
       </div>
       {error && <p className="rounded bg-red-50 p-3 text-sm text-red-700">{error}</p>}
 
@@ -214,7 +214,7 @@ function ProductCells({ value, footer = false }: { value?: ProductTotal; footer?
   const qty = value?.qty ?? 0;
   const amount = value?.amount ?? 0;
   const cell = footer ? "border-slate-600" : "border-gray-200";
-  return <><td className={`px-3 py-2 text-right ${!value ? "text-gray-300" : ""}`}>{value ? number(qty) : "â€”"}</td><td className="px-3 py-2 text-right">{value ? number(amount) : "â€”"}</td><td className={`border-r px-3 py-2 text-right ${cell}`}>{value && qty ? number(amount / qty) : "â€”"}</td></>;
+  return <><td className={`px-3 py-2 text-right ${!value ? "text-gray-300" : ""}`}>{value ? number(qty) : "—"}</td><td className="px-3 py-2 text-right">{value ? number(amount) : "—"}</td><td className={`border-r px-3 py-2 text-right ${cell}`}>{value && qty ? number(amount / qty) : "—"}</td></>;
 }
 
 function EmptyRow({ columns, text }: { columns: number; text: string }) {

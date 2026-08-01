@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
 import { adminApi } from "../../api/admin.api";
 import { apiErrorMessage } from "../../api/client";
@@ -37,7 +37,7 @@ export function CitiesPage() {
       setName("");
       await load();
     } catch (err) {
-      setError(apiErrorMessage(err, "Could not add city â€” it may already exist."));
+      setError(apiErrorMessage(err, "Could not add city — it may already exist."));
     } finally {
       setSubmitting(false);
     }
@@ -57,7 +57,7 @@ export function CitiesPage() {
       setEditingId(null);
       await load();
     } catch (err) {
-      setError(apiErrorMessage(err, "Could not rename city â€” the name may already exist."));
+      setError(apiErrorMessage(err, "Could not rename city — the name may already exist."));
     }
   }
 
@@ -119,7 +119,7 @@ export function CitiesPage() {
             ) : cities.length === 0 ? (
               <tr>
                 <td className="px-4 py-4 text-gray-400" colSpan={2}>
-                  No cities yet â€” add your first one above.
+                  No cities yet — add your first one above.
                 </td>
               </tr>
             ) : (

@@ -1,4 +1,4 @@
-﻿import { Fragment, useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { riderApi } from "../../api/rider.api";
 import { apiErrorMessage } from "../../api/client";
 import type { PickupSafe } from "../../api/types";
@@ -112,7 +112,7 @@ export function MyPickupHistoryPage() {
   }, [matchingPickups]);
 
   const totalKg = groups.reduce((sum, g) => sum + g.totalKg, 0);
-  const periodLabel = period === "daily" ? displayDate(range.from) : `${displayDate(range.from)} â€“ ${displayDate(range.to)}`;
+  const periodLabel = period === "daily" ? displayDate(range.from) : `${displayDate(range.from)} – ${displayDate(range.to)}`;
 
   return (
     <div className="space-y-5">

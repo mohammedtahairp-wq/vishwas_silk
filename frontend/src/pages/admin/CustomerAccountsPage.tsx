@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { adminApi } from "../../api/admin.api";
 import { apiErrorMessage } from "../../api/client";
@@ -72,7 +72,7 @@ export function CustomerAccountsPage() {
     <div className="space-y-5">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <Link to="/admin" className="text-sm text-emerald-600 hover:underline">â† Back to dashboard</Link>
+          <Link to="/admin" className="text-sm text-emerald-600 hover:underline">← Back to dashboard</Link>
           <h1 className="mt-2 text-2xl font-semibold text-gray-900">Customer Accounts</h1>
           <p className="text-sm text-gray-500">Customer collection amounts without profile-management details.</p>
         </div>
@@ -114,7 +114,7 @@ export function CustomerAccountsPage() {
               <Empty text="No customers found for this selection." />
             ) : rows.map(({ customer, amount }) => (
               <tr key={customer.id} className="border-t border-gray-100 hover:bg-emerald-50/40">
-                <td className="px-4 py-3 font-mono font-semibold text-emerald-700">{customer.serialNumber ?? "â€”"}</td>
+                <td className="px-4 py-3 font-mono font-semibold text-emerald-700">{customer.serialNumber ?? "—"}</td>
                 <td className="px-4 py-3">
                   <Link to={historyLink(customer.id)} className="font-medium text-emerald-600 hover:underline">
                     {customer.name}
@@ -132,7 +132,7 @@ export function CustomerAccountsPage() {
           {!loading && rows.length > 0 && (
             <tfoot>
               <tr className="border-t-2 border-emerald-600 bg-emerald-50 font-semibold">
-                <td className="px-4 py-3" colSpan={3}>TOTAL Â· {rows.length} customers</td>
+                <td className="px-4 py-3" colSpan={3}>TOTAL · {rows.length} customers</td>
                 <td className="px-4 py-3 text-right">{money(total)}</td>
               </tr>
             </tfoot>

@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { riderApi } from "../../api/rider.api";
 import type { Customer } from "../../api/types";
@@ -27,7 +27,7 @@ export function MyCustomersPage() {
               <p className="font-medium text-gray-900">{c.name}</p>
               <p className="text-sm text-gray-500">{c.phone}</p>
               <p className="text-sm text-gray-500">
-                {c.address} {c.villageArea ? `Â· ${c.villageArea}` : ""}
+                {c.address} {c.villageArea ? `· ${c.villageArea}` : ""}
               </p>
             </button>
           ))

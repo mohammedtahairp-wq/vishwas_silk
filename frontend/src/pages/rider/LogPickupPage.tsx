@@ -1,4 +1,4 @@
-﻿import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import { useSearchParams } from "react-router-dom";
 import { riderApi } from "../../api/rider.api";
@@ -149,7 +149,7 @@ export function LogPickupPage() {
                     </span>
                     <div className="flex-1">
                       <p className="text-gray-900">{c.name}</p>
-                      <p className="text-xs text-gray-500">{c.serialNumber ?? ""}{c.serialNumber && c.villageArea ? " Â· " : ""}{c.villageArea ?? ""}</p>
+                      <p className="text-xs text-gray-500">{c.serialNumber ?? ""}{c.serialNumber && c.villageArea ? " · " : ""}{c.villageArea ?? ""}</p>
                     </div>
                     <span className="text-xs text-gray-400">{c.phone}</span>
                   </button>
@@ -175,7 +175,7 @@ export function LogPickupPage() {
         {selectedCustomer && products.length > 0 && (
           <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
             <div className="mb-3 flex items-center gap-2">
-              <div className="flex h-6 w-6 items-center justify-center rounded-full bg-green-100 text-xs text-green-700">âœ“</div>
+              <div className="flex h-6 w-6 items-center justify-center rounded-full bg-green-100 text-xs text-green-700">✓</div>
               <h2 className="text-sm font-semibold text-gray-700">
                 Enter collection for {selectedCustomer.name}
               </h2>

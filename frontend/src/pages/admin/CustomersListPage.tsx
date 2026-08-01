@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { adminApi } from "../../api/admin.api";
@@ -108,7 +108,7 @@ export function CustomersListPage() {
           : undefined,
       });
       if (assignedRiderId) await adminApi.assignRider(result.customer.id, assignedRiderId);
-      setCreatedInfo(`"${result.customer.name}" created${result.username ? ` â€” username: ${result.username}` : ""}`);
+      setCreatedInfo(`"${result.customer.name}" created${result.username ? ` — username: ${result.username}` : ""}`);
       setName("");
       setPhone("");
       setAddress("");
@@ -119,7 +119,7 @@ export function CustomersListPage() {
       setProductPrices([]);
       await load();
     } catch (err) {
-      setError(apiErrorMessage(err, "Could not create customer â€” check the fields and try again"));
+      setError(apiErrorMessage(err, "Could not create customer — check the fields and try again"));
     } finally {
       setSubmitting(false);
     }
@@ -296,14 +296,14 @@ export function CustomersListPage() {
             ) : (
               visibleCustomers.map((c) => (
                 <tr key={c.id} className="border-t border-gray-100 hover:bg-gray-50">
-                  <td className="px-4 py-2 font-mono font-semibold text-emerald-700">{c.serialNumber ?? "â€”"}</td>
+                  <td className="px-4 py-2 font-mono font-semibold text-emerald-700">{c.serialNumber ?? "—"}</td>
                   <td className="px-4 py-2">
                     <Link to={`/admin/customers/${c.id}`} className="text-emerald-600 hover:underline">
                       {c.name}
                     </Link>
                   </td>
                   <td className="px-4 py-2">{c.phone}</td>
-                  <td className="px-4 py-2">{c.villageArea ?? "â€”"}</td>
+                  <td className="px-4 py-2">{c.villageArea ?? "—"}</td>
                   <td className="px-4 py-2">
                     <select
                       aria-label={`Assigned rider for ${c.name}`}

@@ -1,4 +1,4 @@
-﻿import { Fragment, useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { adminApi } from "../../api/admin.api";
 import { apiErrorMessage } from "../../api/client";
@@ -105,10 +105,10 @@ export function CustomerProductHistoryPage() {
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <Link to={`/admin/customer-accounts?${backParams.toString()}`} className="text-sm text-emerald-600 hover:underline">
-            â† Back to customer accounts
+            ← Back to customer accounts
           </Link>
           <h1 className="mt-2 text-2xl font-semibold text-gray-900">{customer?.name ?? "Customer product history"}</h1>
-          {customer && <p className="text-sm text-gray-500">{customer.phone} Â· {customer.villageArea || "Unspecified"}</p>}
+          {customer && <p className="text-sm text-gray-500">{customer.phone} · {customer.villageArea || "Unspecified"}</p>}
         </div>
         <div className="grid w-full grid-cols-2 gap-3 sm:w-auto">
           <Filter label="From">
@@ -211,8 +211,8 @@ export function CustomerProductHistoryPage() {
                   const value = row.byProduct.get(product.id);
                   return (
                     <Fragment key={product.id}>
-                      <td className="px-3 py-3 text-right">{value ? number(value.kg) : "â€”"}</td>
-                      <td className="border-r border-gray-100 px-3 py-3 text-right">{value ? money(value.amount) : "â€”"}</td>
+                      <td className="px-3 py-3 text-right">{value ? number(value.kg) : "—"}</td>
+                      <td className="border-r border-gray-100 px-3 py-3 text-right">{value ? money(value.amount) : "—"}</td>
                     </Fragment>
                   );
                 })}
