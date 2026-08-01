@@ -108,5 +108,6 @@ export interface Transaction {
   totalAmount: string;
   status: "pending" | "paid";
   paidDate: string | null;
+  customer?: Customer;
   lineItems?: TransactionLineItem[];
 }

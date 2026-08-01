@@ -55,6 +55,16 @@ export function DashboardHome() {
       .finally(() => setLoading(false));
   }, [fromDate, toDate]);
 
+  async function handleMarkPaid(id: string) {
+    try {
+      const paidDate = new Date().toISOString().slice(0, 10);
+      await adminApi.markSettlementPaid(id, paidDate);
+      setSettlements((prev) => prev.map((s) => (s.id === id ? { ...s, status: "paid", paidDate } : s)));
+    } catch {
+      /* ignore */
+    }
+  }
+
   const { cityByCustomer, cities } = useMemo(() => {
     const map = new Map<string, string>();
     const set = new Set<string>();
@@ -91,6 +101,7 @@ export function DashboardHome() {
 
     const pending = fSettlements.filter((s) => s.status === "pending");
     const pendingAmount = pending.reduce((sum, s) => sum + Number(s.totalAmount || 0), 0);
+    const pendingList = [...pending].sort((a, b) => b.year - a.year || b.month - a.month);
 
     const buckets: { key: string; label: string; value: number }[] = [];
     for (let i = 5; i >= 0; i--) {
@@ -140,6 +151,7 @@ export function DashboardHome() {
       revenueThisMonth,
       pendingCount: pending.length,
       pendingAmount,
+      pendingList,
       revenueByMonth: buckets,
       byProduct,
       topRiders,
@@ -260,6 +272,49 @@ export function DashboardHome() {
             />
           </div>
         </motion.div>
+
+        {/* Pending settlements */}
+        {stats.pendingList.length > 0 && (
+          <motion.div variants={item} className="mb-6">
+            <Card title="Pending settlements" subtitle={`${stats.pendingList.length} awaiting payment · ${scope}`}>
+              <div className="overflow-x-auto">
+                <table className="min-w-full text-sm">
+                  <thead className="bg-gray-50 text-gray-600 text-left">
+                    <tr>
+                      <th className="px-3 py-2">Customer</th>
+                      <th className="px-3 py-2">Month/Year</th>
+                      <th className="px-3 py-2">Total kg</th>
+                      <th className="px-3 py-2 text-right">Amount</th>
+                      <th className="px-3 py-2"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {stats.pendingList.map((s) => (
+                      <tr key={s.id} className="border-t border-gray-100">
+                        <td className="px-3 py-2 font-medium text-gray-900">{s.customer?.name ?? "—"}</td>
+                        <td className="px-3 py-2">
+                          {MONTHS[s.month - 1]} {s.year}
+                        </td>
+                        <td className="px-3 py-2">{Number(s.totalKg)} kg</td>
+                        <td className="px-3 py-2 text-right font-medium tabular-nums">{inrCurrency(Number(s.totalAmount))}</td>
+                        <td className="px-3 py-2 text-right">
+                          <button onClick={() => handleMarkPaid(s.id)} className="text-emerald-600 hover:underline whitespace-nowrap">
+                            Mark paid
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div className="mt-3 text-right">
+                <button onClick={() => navigate("/admin/settlements")} className="text-sm text-emerald-600 hover:underline">
+                  View all settlements →
+                </button>
+              </div>
+            </Card>
+          </motion.div>
+        )}
 
         {/* City comparison */}
         <motion.div variants={item} className="grid grid-cols-1 gap-5 lg:grid-cols-2 mb-6">

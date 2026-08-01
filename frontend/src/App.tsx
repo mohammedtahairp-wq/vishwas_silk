@@ -3,6 +3,7 @@ import { AuthProvider, useAuth } from "./auth/AuthContext";
 import { ProtectedRoute } from "./auth/ProtectedRoute";
 import { LoginPage } from "./pages/LoginPage";
 import { NotFoundPage } from "./pages/NotFoundPage";
+import { UpdateBanner } from "./components/UpdateBanner";
 
 import { AdminLayout } from "./pages/admin/AdminLayout";
 import { DashboardHome } from "./pages/admin/DashboardHome";
@@ -41,6 +42,7 @@ function HomeRedirect() {
 export default function App() {
   return (
     <HashRouter>
+      <UpdateBanner />
       <AuthProvider>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
