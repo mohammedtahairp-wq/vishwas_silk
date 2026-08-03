@@ -4,10 +4,19 @@ import { prisma } from "../../lib/prisma";
 import * as pickupsService from "../admin/pickups/pickups.service";
 import { assertCustomerBelongsToRider } from "../admin/customers/customers.service";
 import { serializePickups } from "../../serializers/pickup.serializer";
+import { ForbiddenError } from "../../lib/errors";
 
 const createPickupSchema = z.object({
   customer_id: z.string().uuid(),
   product_id: z.string().uuid(),
+  kg: z.number().positive(),
+  pickup_date: z
+    .string()
+    .refine((v) => !Number.isNaN(Date.parse(v)), "Invalid date")
+    .optional(),
+});
+
+const updateOwnPickupSchema = z.object({
   kg: z.number().positive(),
   pickup_date: z
     .string()
@@ -99,6 +108,47 @@ export async function createBatchPickupHandler(req: Request, res: Response) {
 export async function myPickupsHandler(req: Request, res: Response) {
   const pickups = await pickupsService.listPickups({ riderId: req.user!.linkedId! });
   res.json(serializePickups(pickups, "rider"));
+}
+
+export async function updateOwnPickupHandler(req: Request, res: Response) {
+  const { id } = req.params;
+  const body = updateOwnPickupSchema.parse(req.body);
+  const riderId = req.user!.linkedId!;
+
+  const existing = await pickupsService.getPickupById(id);
+  if (!existing) {
+    throw new ForbiddenError("Pickup not found");
+  }
+  if (existing.riderId !== riderId) {
+    throw new ForbiddenError("This pickup does not belong to you");
+  }
+  await assertCustomerBelongsToRider(existing.customerId, riderId);
+
+  const pickup = await pickupsService.updatePickup(id, {
+    customerId: existing.customerId,
+    riderId,
+    productId: existing.productId,
+    kg: body.kg,
+    pickupDate: body.pickup_date ? new Date(body.pickup_date) : existing.pickupDate,
+  });
+
+  res.json(serializePickups([pickup], "rider")[0]);
+}
+
+export async function deleteOwnPickupHandler(req: Request, res: Response) {
+  const { id } = req.params;
+  const riderId = req.user!.linkedId!;
+
+  const existing = await pickupsService.getPickupById(id);
+  if (!existing) {
+    throw new ForbiddenError("Pickup not found");
+  }
+  if (existing.riderId !== riderId) {
+    throw new ForbiddenError("This pickup does not belong to you");
+  }
+
+  await pickupsService.deletePickup(id);
+  res.status(204).end();
 }
 
 export async function priceAvailabilityHandler(req: Request, res: Response) {

@@ -75,3 +75,9 @@ export async function updatePickupHandler(req: Request, res: Response) {
 
   res.json(serializePickups([pickup], "admin")[0]);
 }
+
+export async function deletePickupHandler(req: Request, res: Response) {
+  const { id } = req.params;
+  await pickupsService.deletePickup(id);
+  res.status(204).end();
+}

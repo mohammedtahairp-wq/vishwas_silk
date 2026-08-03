@@ -69,6 +69,7 @@ export function PickupsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [editingPickup, setEditingPickup] = useState<PickupAdmin | null>(null);
+  const [deletingPickup, setDeletingPickup] = useState<PickupAdmin | null>(null);
 
   const range = useMemo(() => reportRange(period, selectedDate), [period, selectedDate]);
 
@@ -124,6 +125,24 @@ export function PickupsPage() {
 
   function handleEdit(pickup: PickupAdmin) {
     setEditingPickup(pickup);
+  }
+
+  function handleDelete(pickup: PickupAdmin) {
+    setDeletingPickup(pickup);
+  }
+
+  async function confirmDelete() {
+    if (!deletingPickup) return;
+    try {
+      await adminApi.deletePickup(deletingPickup.id);
+      setDeletingPickup(null);
+      const rows = await adminApi.listPickups({ from: range.from, to: range.to });
+      setPickups(rows);
+      setError(null);
+    } catch (err) {
+      setError(apiErrorMessage(err, "Could not delete pickup."));
+      setDeletingPickup(null);
+    }
   }
 
   return (
@@ -251,7 +270,10 @@ export function PickupsPage() {
                   </td>
                   <td className="px-3 py-2 text-center">
                     {pickup.status === "pending" && (
-                      <button onClick={() => handleEdit(pickup)} className="rounded bg-emerald-600 px-2 py-1 text-xs font-medium text-white hover:bg-emerald-700">Edit</button>
+                      <div className="flex items-center justify-center gap-1.5">
+                        <button onClick={() => handleEdit(pickup)} className="rounded bg-emerald-600 px-2 py-1 text-xs font-medium text-white hover:bg-emerald-700">Edit</button>
+                        <button onClick={() => handleDelete(pickup)} className="rounded bg-red-600 px-2 py-1 text-xs font-medium text-white hover:bg-red-700">Delete</button>
+                      </div>
                     )}
                   </td>
                 </tr>
@@ -271,6 +293,21 @@ export function PickupsPage() {
             adminApi.listPickups({ from: range.from, to: range.to }).then(setPickups);
           }}
         />
+      )}
+
+      {deletingPickup && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setDeletingPickup(null)}>
+          <div className="w-full max-w-sm rounded-xl bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <h2 className="text-lg font-bold text-gray-900">Delete pickup?</h2>
+            <p className="mt-1 text-sm text-gray-500">
+              This will permanently remove the {Number(deletingPickup.kg)} kg {deletingPickup.product?.name ?? "product"} pickup for {deletingPickup.customer?.name ?? "this customer"}.
+            </p>
+            <div className="mt-5 flex justify-end gap-2">
+              <button onClick={() => setDeletingPickup(null)} className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">Cancel</button>
+              <button onClick={confirmDelete} className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700">Delete</button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

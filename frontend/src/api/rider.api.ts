@@ -10,6 +10,9 @@ export const riderApi = {
   logBatchPickup: (data: { customer_id: string; items: { product_id: string; kg: number }[]; pickup_date?: string }) =>
     apiClient.post<PickupSafe[]>("/rider/pickups/batch", data).then((r) => r.data),
   myPickups: () => apiClient.get<PickupSafe[]>("/rider/pickups").then((r) => r.data),
+  updatePickup: (id: string, data: { kg: number; pickup_date?: string }) =>
+    apiClient.put<PickupSafe>(`/rider/pickups/${id}`, data).then((r) => r.data),
+  deletePickup: (id: string) => apiClient.delete(`/rider/pickups/${id}`).then((r) => r.data),
   priceAvailability: (customerId: string, productId: string) =>
     apiClient.get<{ available: boolean }>("/rider/price-availability", { params: { customer_id: customerId, product_id: productId } }).then((r) => r.data.available),
 };

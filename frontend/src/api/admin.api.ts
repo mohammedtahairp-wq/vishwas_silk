@@ -49,6 +49,7 @@ export const adminApi = {
     apiClient.post<PickupAdmin[]>("/admin/pickups", data).then((r) => r.data),
   updatePickup: (id: string, data: { customer_id: string; rider_id: string; product_id: string; kg: number; pickup_date: string }) =>
     apiClient.put<PickupAdmin>(`/admin/pickups/${id}`, data).then((r) => r.data),
+  deletePickup: (id: string) => apiClient.delete(`/admin/pickups/${id}`).then((r) => r.data),
 
   listSettlements: () => apiClient.get<Transaction[]>("/admin/settlements").then((r) => r.data),
   generateSettlement: (data: { customer_id: string; month: number; year: number }) =>

@@ -1,5 +1,5 @@
 import { prisma } from "../../../lib/prisma";
-import { NotFoundError } from "../../../lib/errors";
+import { ConflictError, NotFoundError } from "../../../lib/errors";
 import * as pricingService from "../pricing/pricing.service";
 
 interface PickupFilter {
@@ -99,6 +99,28 @@ export async function createBatchPickups(input: CreateBatchPickupsInput) {
   });
 }
 
+export function getPickupById(id: string) {
+  return prisma.pickup.findUnique({
+    where: { id },
+    include: { customer: true, rider: true, product: true },
+  });
+}
+
+/**
+ * Guards edit/delete on a pickup. Once a pickup is included in a settlement
+ * (or paid), changing or removing it would corrupt the settlement totals, so
+ * only `pending` pickups may be edited or deleted. Throws if missing.
+ */
+export async function assertPickupPending(id: string) {
+  const pickup = await prisma.pickup.findUnique({ where: { id }, select: { status: true } });
+  if (!pickup) {
+    throw new NotFoundError("Pickup not found");
+  }
+  if (pickup.status !== "pending") {
+    throw new ConflictError("This pickup is already included in a settlement and cannot be edited or deleted");
+  }
+}
+
 export async function updatePickup(id: string, input: {
   customerId: string;
   riderId: string;
@@ -106,6 +128,8 @@ export async function updatePickup(id: string, input: {
   kg: number;
   pickupDate: Date;
 }) {
+  await assertPickupPending(id);
+
   const price = await pricingService.currentPriceFor(input.customerId, input.productId, input.pickupDate);
   if (!price) {
     throw new NotFoundError("No price set for this customer and product — ask admin to set a price/kg first");
@@ -131,4 +155,9 @@ export async function updatePickup(id: string, input: {
 
 export async function priceAvailable(customerId: string, productId: string) {
   return Boolean(await pricingService.currentPriceFor(customerId, productId));
+}
+
+export async function deletePickup(id: string) {
+  await assertPickupPending(id);
+  await prisma.pickup.delete({ where: { id } });
 }
