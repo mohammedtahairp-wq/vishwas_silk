@@ -16,41 +16,72 @@ export function UpdateBanner() {
   const [manifest, setManifest] = useState<ApkManifest | null>(null);
   const [installedVersion, setInstalledVersion] = useState<string>("");
   const [dismissed, setDismissed] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!Capacitor.isNativePlatform()) return;
 
-    let cancelled = false;
-
     async function check() {
+      setError(null);
       try {
-        const [info, manifestResponse] = await Promise.all([
-          App.getInfo(),
-          fetch(VERSION_URL, { cache: "no-store" }),
-        ]);
-        if (cancelled) return;
-        if (!manifestResponse.ok) return;
-        const manifestJson = (await manifestResponse.json()) as ApkManifest;
-        if (!manifestJson || typeof manifestJson.versionCode !== "number") return;
-        const installedCode = Number(info.build);
-        setInstalledVersion(info.version);
-        if (manifestJson.versionCode > installedCode) {
-          setManifest(manifestJson);
+        let info: Awaited<ReturnType<typeof App.getInfo>> | null = null;
+        try {
+          info = await App.getInfo();
+          if (info) setInstalledVersion(info.version);
+        } catch (err) {
+          console.warn("[UpdateBanner] App.getInfo failed:", err);
+          setError("App.getInfo failed: " + String(err));
         }
-      } catch {
-        /* offline / not reachable — skip silently */
+
+        let manifestResponse: Response;
+        try {
+          manifestResponse = await fetch(VERSION_URL, { cache: "no-store" });
+        } catch (err) {
+          console.warn("[UpdateBanner] fetch failed:", err);
+          setError("Network error: " + String(err));
+          return;
+        }
+        if (!manifestResponse.ok) {
+          setError("version.json HTTP " + manifestResponse.status);
+          return;
+        }
+        const manifestJson = (await manifestResponse.json()) as ApkManifest;
+        if (!manifestJson || typeof manifestJson.versionCode !== "number") {
+          setError("version.json parse failed");
+          return;
+        }
+        const installedCode = info ? Number(info.build) : NaN;
+        if (!Number.isNaN(installedCode) && manifestJson.versionCode > installedCode) {
+          setManifest(manifestJson);
+        } else if (Number.isNaN(installedCode)) {
+          setError("Cannot read installed version (App.getInfo unavailable)");
+        }
+      } catch (err) {
+        console.error("[UpdateBanner] unexpected error:", err);
+        setError("Unexpected: " + String(err));
       }
     }
 
     check();
     const interval = setInterval(check, CHECK_INTERVAL_MS);
     return () => {
-      cancelled = true;
       clearInterval(interval);
     };
   }, []);
 
-  if (!Capacitor.isNativePlatform() || !manifest || dismissed) return null;
+  if (!Capacitor.isNativePlatform() || dismissed) return null;
+
+  if (!manifest) {
+    if (!error) return null;
+    return (
+      <div className="fixed inset-x-0 top-0 z-[9999] bg-amber-600 px-4 py-2 text-xs text-white shadow-lg" role="banner">
+        Update check failed: {error}{" "}
+        <button onClick={() => setDismissed(true)} className="ml-2 font-semibold underline">
+          dismiss
+        </button>
+      </div>
+    );
+  }
 
   const currentManifest = manifest;
   function openDownload() {

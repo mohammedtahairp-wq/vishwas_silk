@@ -12,6 +12,7 @@ backend/prisma/*.xlsx
 *.log
 .DS_Store
 *.pem
+*.ppk
 *.csv
 *.apk
 *.tsbuildinfo

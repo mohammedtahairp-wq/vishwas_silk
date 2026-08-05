@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { adminApi } from "../../api/admin.api";
@@ -39,6 +39,14 @@ export function CustomersListPage() {
 
   const [editing, setEditing] = useState<Customer | null>(null);
 
+  const cityOptions = useMemo(() => {
+    const names = new Set<string>(cities.map((city) => city.name));
+    for (const customer of customers) {
+      names.add(customer.villageArea?.trim() || "Unspecified");
+    }
+    return [...names].sort((a, b) => a.localeCompare(b));
+  }, [cities, customers]);
+
   async function load() {
     setLoading(true);
     try {
@@ -56,7 +64,7 @@ export function CustomersListPage() {
   }, []);
 
   const visibleCustomers = customers.filter((customer) => {
-    if (selectedCity && (customer.villageArea?.trim() || "Unspecified") !== selectedCity) return false;
+    if (selectedCity && (customer.villageArea?.trim() || "Unspecified").toLowerCase() !== selectedCity.toLowerCase()) return false;
     if (riderFilter === "__unassigned__" && customer.assignedRiderId) return false;
     if (riderFilter && riderFilter !== "__unassigned__" && customer.assignedRiderId !== riderFilter) return false;
     if (statusFilter && customer.status !== statusFilter) return false;
@@ -174,8 +182,7 @@ export function CustomersListPage() {
             <label className="text-xs font-medium text-gray-600">City
               <select className="ml-2 rounded border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-800" value={selectedCity} onChange={(event) => changeCity(event.target.value)}>
                 <option value="">All cities</option>
-                {cities.map((item) => <option key={item.id} value={item.name}>{item.name}</option>)}
-                {customers.some((customer) => !customer.villageArea?.trim()) && <option value="Unspecified">Unspecified</option>}
+                {cityOptions.map((name) => <option key={name} value={name}>{name}</option>)}
               </select>
             </label>
             <label className="text-xs font-medium text-gray-600">Rider

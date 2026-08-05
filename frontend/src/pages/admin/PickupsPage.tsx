@@ -73,6 +73,14 @@ export function PickupsPage() {
 
   const range = useMemo(() => reportRange(period, selectedDate), [period, selectedDate]);
 
+  const cityOptions = useMemo(() => {
+    const names = new Set<string>(cities.map((city) => city.name));
+    for (const pickup of pickups) {
+      if (pickup.customer?.villageArea?.trim()) names.add(pickup.customer.villageArea.trim());
+    }
+    return [...names].sort((a, b) => a.localeCompare(b));
+  }, [cities, pickups]);
+
   const fetchCommon = () => Promise.all([adminApi.listCities(), adminApi.listProducts()]).then(([cityRows, productRows]) => {
     setCities(cityRows);
     setProducts(productRows);
@@ -95,7 +103,7 @@ export function PickupsPage() {
   const reportRows = useMemo(() => {
     const rows = new Map<string, ReportRow>();
     for (const pickup of pickups) {
-      if (city && pickup.customer?.villageArea !== city) continue;
+      if (city && pickup.customer?.villageArea?.trim()?.toLowerCase() !== city.toLowerCase()) continue;
       const row = rows.get(pickup.customerId) ?? {
         customerId: pickup.customerId,
         customerName: pickup.customer?.name ?? "Unknown customer",
@@ -168,7 +176,7 @@ export function PickupsPage() {
             City
             <select className="mt-1 w-full rounded border border-gray-300 px-2 py-2 text-sm" value={city} onChange={(e) => setCity(e.target.value)}>
               <option value="">All cities</option>
-              {cities.map((item) => <option key={item.id} value={item.name}>{item.name}</option>)}
+              {cityOptions.map((name) => <option key={name} value={name}>{name}</option>)}
             </select>
           </label>
         )}
