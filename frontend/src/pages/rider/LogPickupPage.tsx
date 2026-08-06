@@ -4,6 +4,11 @@ import { useSearchParams } from "react-router-dom";
 import { riderApi } from "../../api/rider.api";
 import type { Customer, CustomerProduct } from "../../api/types";
 
+function localDateValue(date = new Date()) {
+  const offset = date.getTimezoneOffset() * 60_000;
+  return new Date(date.getTime() - offset).toISOString().slice(0, 10);
+}
+
 export function LogPickupPage() {
   const [searchParams] = useSearchParams();
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -17,6 +22,7 @@ export function LogPickupPage() {
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [pickupDate, setPickupDate] = useState(localDateValue());
   const dropdownRef = useRef<HTMLDivElement>(null);
   const initialSelectDone = useRef(false);
 
@@ -100,11 +106,12 @@ export function LogPickupPage() {
     setMessage(null);
     setSubmitting(true);
     try {
-      await riderApi.logBatchPickup({ customer_id: selectedCustomer.id, items });
+      await riderApi.logBatchPickup({ customer_id: selectedCustomer.id, items, pickup_date: pickupDate });
       setSelectedCustomer(null);
       setSearch("");
       setProducts([]);
       setKgValues({});
+      setPickupDate(localDateValue());
       setMessage("Pickup logged successfully!");
     } catch {
       setError("Could not log pickup. Please try again.");
@@ -124,6 +131,17 @@ export function LogPickupPage() {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-5">
+        <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+          <label className="mb-1.5 block text-sm font-semibold text-gray-700">Pickup Date</label>
+          <input
+            type="date"
+            className="w-full rounded-lg border border-gray-300 px-4 py-3 text-base"
+            value={pickupDate}
+            onChange={(e) => setPickupDate(e.target.value)}
+            required
+          />
+        </div>
+
         <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
           <label className="mb-1.5 block text-sm font-semibold text-gray-700">Select Customer</label>
           <div ref={dropdownRef} className="relative">
