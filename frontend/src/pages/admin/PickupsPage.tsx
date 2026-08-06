@@ -212,7 +212,7 @@ export function PickupsPage() {
                 <tr>
                   <th rowSpan={2} className="border-r border-emerald-500 px-3 py-2">Customer</th>
                   {visibleProducts.map((product) => (
-                    <th key={product.id} colSpan={2} className="border-r border-emerald-500 px-3 py-2 text-center">{product.name}</th>
+                    <th key={product.id} colSpan={1} className="border-r border-emerald-500 px-3 py-2 text-center">{product.name}</th>
                   ))}
                   <th colSpan={2} className="px-3 py-2 text-center">Total</th>
                 </tr>
@@ -220,22 +220,22 @@ export function PickupsPage() {
                   {visibleProducts.map((product) => (
                     <FragmentColumns key={product.id} />
                   ))}
-                  <th className="px-3 py-2 text-right">Kg</th>
+                  <th className="px-3 py-2 text-center">Kg</th>
                   <th className="px-3 py-2 text-right">Amount</th>
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
-                  <tr><td colSpan={3 + visibleProducts.length * 2} className="px-4 py-8 text-center text-gray-400">Loading report...</td></tr>
+                  <tr><td colSpan={3 + visibleProducts.length} className="px-4 py-8 text-center text-gray-400">Loading report...</td></tr>
                 ) : reportRows.length === 0 ? (
-                  <tr><td colSpan={3 + visibleProducts.length * 2} className="px-4 py-8 text-center text-gray-400">No pickups found for this city and period.</td></tr>
+                  <tr><td colSpan={3 + visibleProducts.length} className="px-4 py-8 text-center text-gray-400">No pickups found for this city and period.</td></tr>
                 ) : reportRows.map((row) => (
                   <tr key={row.customerId} className="border-t border-gray-100 hover:bg-gray-50">
                     <td className="border-r border-gray-200 px-3 py-2 font-medium text-gray-900">{row.customerName}</td>
                     {visibleProducts.map((product) => (
-                      <ProductColumns key={product.id} kg={row.values[product.id]?.kg ?? 0} amount={row.values[product.id]?.amount ?? 0} />
+                      <ProductColumns key={product.id} kg={row.values[product.id]?.kg ?? 0} />
                     ))}
-                    <td className="bg-gray-50 px-3 py-2 text-right font-medium">{number(row.totalKg)}</td>
+                    <td className="bg-gray-50 px-3 py-2 text-center font-medium">{number(row.totalKg)}</td>
                     <td className="bg-gray-50 px-3 py-2 text-right font-medium">{money(row.totalAmount)}</td>
                   </tr>
                 ))}
@@ -252,25 +252,23 @@ export function PickupsPage() {
                 <th className="px-3 py-2">Customer</th>
                 <th className="px-3 py-2">Rider</th>
                 <th className="px-3 py-2">Product</th>
-                <th className="px-3 py-2 text-right">Kg</th>
-                <th className="px-3 py-2 text-right">Amount</th>
+                <th className="px-3 py-2 text-center">Kg</th>
                 <th className="px-3 py-2">Status</th>
                 <th className="px-3 py-2 text-center">Action</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={8} className="px-4 py-8 text-center text-gray-400">Loading pickups...</td></tr>
+                <tr><td colSpan={7} className="px-4 py-8 text-center text-gray-400">Loading pickups...</td></tr>
               ) : pickups.length === 0 ? (
-                <tr><td colSpan={8} className="px-4 py-8 text-center text-gray-400">No pickups found for this period.</td></tr>
+                <tr><td colSpan={7} className="px-4 py-8 text-center text-gray-400">No pickups found for this period.</td></tr>
               ) : pickups.map((pickup) => (
                 <tr key={pickup.id} className="border-t border-gray-100 hover:bg-gray-50">
                   <td className="px-3 py-2">{new Date(pickup.pickupDate).toLocaleDateString("en-IN")}</td>
                   <td className="px-3 py-2 font-medium text-gray-900">{pickup.customer?.name ?? "—"}</td>
                   <td className="px-3 py-2 text-gray-600">{pickup.rider?.name ?? "—"}</td>
                   <td className="px-3 py-2">{pickup.product?.name ?? "—"}</td>
-                  <td className="px-3 py-2 text-right">{number(Number(pickup.kg))}</td>
-                  <td className="px-3 py-2 text-right">{money(Number(pickup.amount))}</td>
+                  <td className="px-3 py-2 text-center">{number(Number(pickup.kg))}</td>
                   <td className="px-3 py-2">
                     <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${pickup.status === "pending" ? "bg-yellow-100 text-yellow-800" : pickup.status === "included_in_settlement" ? "bg-blue-100 text-blue-800" : "bg-green-100 text-green-800"}`}>
                       {pickup.status.replace(/_/g, " ")}
@@ -322,11 +320,11 @@ export function PickupsPage() {
 }
 
 function FragmentColumns() {
-  return <><th className="px-3 py-2 text-right">Kg</th><th className="border-r border-emerald-500 px-3 py-2 text-right">Amount</th></>;
+  return <><th className="border-r border-emerald-500 px-3 py-2 text-center">Kg</th></>;
 }
 
-function ProductColumns({ kg, amount }: { kg: number; amount: number }) {
-  return <><td className="px-3 py-2 text-right">{number(kg)}</td><td className="border-r border-gray-200 px-3 py-2 text-right">{money(amount)}</td></>;
+function ProductColumns({ kg }: { kg: number }) {
+  return <><td className="border-r border-gray-200 px-3 py-2 text-center">{number(kg)}</td></>;
 }
 
 interface EditPickupModalProps {
