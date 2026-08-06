@@ -98,7 +98,7 @@ export function CustomerProductHistoryPage() {
 
   const backParams = new URLSearchParams({ from, to });
   if (city) backParams.set("city", city);
-  const columnCount = activeProducts.length * 2 + 3;
+  const columnCount = activeProducts.length + 3;
 
   return (
     <div className="space-y-5">
@@ -149,9 +149,7 @@ export function CustomerProductHistoryPage() {
                 return (
                   <div key={product.id} className="grid grid-cols-[1fr_auto] gap-x-4 gap-y-1 px-4 py-3">
                     <p className="font-medium text-gray-900">{product.name}</p>
-                    <p className="text-right font-semibold text-gray-900">{money(value.amount)}</p>
-                    <p className="text-xs text-gray-500">Quantity</p>
-                    <p className="text-right text-sm text-gray-600">{number(value.kg)} kg</p>
+                    <p className="text-right text-sm font-semibold text-gray-900">{number(value.kg)} kg</p>
                   </div>
                 );
               })}
@@ -178,7 +176,7 @@ export function CustomerProductHistoryPage() {
                 Date
               </th>
               {activeProducts.map((product) => (
-                <th key={product.id} colSpan={2} className="min-w-48 border-r border-emerald-500 px-3 py-3 text-center text-base font-semibold">
+                <th key={product.id} colSpan={1} className="min-w-48 border-r border-emerald-500 px-3 py-3 text-center text-base font-semibold">
                   {product.name}
                 </th>
               ))}
@@ -189,8 +187,7 @@ export function CustomerProductHistoryPage() {
             <tr className="bg-emerald-600">
               {activeProducts.map((product) => (
                 <Fragment key={product.id}>
-                  <th className="min-w-20 px-3 py-2 text-right">Kg</th>
-                  <th className="min-w-28 border-r border-emerald-400 px-3 py-2 text-right">Amount</th>
+                  <th className="min-w-20 border-r border-emerald-400 px-3 py-2 text-right">Kg</th>
                 </Fragment>
               ))}
               <th className="sticky right-28 z-20 min-w-20 border-l border-emerald-400 bg-emerald-600 px-3 py-2 text-right">Kg</th>
@@ -211,8 +208,7 @@ export function CustomerProductHistoryPage() {
                   const value = row.byProduct.get(product.id);
                   return (
                     <Fragment key={product.id}>
-                      <td className="px-3 py-3 text-right">{value ? number(value.kg) : "—"}</td>
-                      <td className="border-r border-gray-100 px-3 py-3 text-right">{value ? money(value.amount) : "—"}</td>
+                      <td className="border-r border-gray-100 px-3 py-3 text-right">{value ? number(value.kg) : "—"}</td>
                     </Fragment>
                   );
                 })}
@@ -229,8 +225,7 @@ export function CustomerProductHistoryPage() {
                   const value = productTotals.get(product.id) ?? { kg: 0, amount: 0 };
                   return (
                     <Fragment key={product.id}>
-                      <td className="px-3 py-3 text-right">{number(value.kg)}</td>
-                      <td className="border-r border-emerald-200 px-3 py-3 text-right">{money(value.amount)}</td>
+                      <td className="border-r border-emerald-200 px-3 py-3 text-right">{number(value.kg)}</td>
                     </Fragment>
                   );
                 })}
