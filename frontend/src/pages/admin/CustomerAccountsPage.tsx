@@ -12,6 +12,86 @@ const localDate = (date: Date) => {
 const money = (value: number) =>
   value.toLocaleString("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 2 });
 
+const escapeHtml = (value: string) =>
+  value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+
+const printDate = (value: string) => new Date(`${value}T00:00:00`).toLocaleDateString("en-IN");
+
+function buildAccountsPrintHtml(rows: { customer: Customer; amount: number }[], total: number, city: string, from: string, to: string) {
+  const generatedAt = new Date().toLocaleString("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+  const bodyRows = rows
+    .map((row) => `
+      <tr>
+        <td>${escapeHtml(row.customer.serialNumber ?? "—")}</td>
+        <td>${escapeHtml(row.customer.name)}</td>
+        <td>${escapeHtml(row.customer.phone)}</td>
+        <td class="num">${money(row.amount)}</td>
+      </tr>`)
+    .join("");
+
+  return `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Customer Accounts</title>
+<style>
+  @page { size: A4; margin: 12mm; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: "Segoe UI", Arial, sans-serif; color: #111827; }
+  .report-header { background: #065f46; color: #fff; padding: 16px 22px; }
+  .report-header h1 { margin: 0; font-size: 20px; letter-spacing: 0.3px; }
+  .report-header p { margin: 4px 0 0; font-size: 12px; opacity: 0.9; }
+  .meta { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px; padding: 10px 22px; background: #f3f4f6; font-size: 12px; }
+  table { width: calc(100% - 44px); margin: 16px 22px 0; border-collapse: collapse; font-size: 12px; }
+  th, td { border: 1px solid #d1d5db; padding: 6px 9px; text-align: left; }
+  th { background: #065f46; color: #fff; font-size: 11px; text-transform: uppercase; letter-spacing: 0.4px; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  tbody tr:nth-child(even) td { background: #f9fafb; }
+  tr.total td { background: #d1fae5; font-weight: 700; }
+  .footer { margin: 16px 22px; font-size: 11px; color: #6b7280; }
+</style>
+</head>
+<body>
+  <div class="report-header">
+    <h1>VISHWAS SILK — Customer Accounts</h1>
+    <p>Generated on ${escapeHtml(generatedAt)}</p>
+  </div>
+  <div class="meta">
+    <span><strong>Period:</strong> ${printDate(from)} – ${printDate(to)}</span>
+    <span><strong>City:</strong> ${escapeHtml(city || "All cities")}</span>
+    <span><strong>Customers:</strong> ${rows.length}</span>
+  </div>
+  <table>
+    <thead>
+      <tr>
+        <th style="width:14%">Serial No</th>
+        <th>Customer name</th>
+        <th style="width:18%">Phone number</th>
+        <th class="num" style="width:20%">Amount</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${bodyRows}
+    </tbody>
+    <tfoot>
+      <tr class="total">
+        <td colspan="2">TOTAL · ${rows.length} customers</td>
+        <td></td>
+        <td class="num">${money(total)}</td>
+      </tr>
+    </tfoot>
+  </table>
+  <p class="footer">Printed from VISHWAS SILK · https://manage.vishwassilk.com</p>
+</body>
+</html>`;
+}
+
 export function CustomerAccountsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const city = searchParams.get("city") ?? "";
@@ -62,6 +142,16 @@ export function CustomerAccountsPage() {
     setSearchParams(next);
   }
 
+  function handlePrint() {
+    const html = buildAccountsPrintHtml(rows, total, city, from, to);
+    const win = window.open("", "_blank", "width=900,height=700");
+    if (!win) { setError("Pop-ups are blocked. Allow pop-ups for this site to print."); return; }
+    win.document.write(html);
+    win.document.close();
+    win.focus();
+    win.onload = () => { win.print(); };
+  }
+
   const historyLink = (customerId: string) => {
     const params = new URLSearchParams({ from, to });
     if (city) params.set("city", city);
@@ -92,6 +182,13 @@ export function CustomerAccountsPage() {
           <Filter label="To">
             <input type="date" value={to} min={from} onChange={(e) => updateFilter("to", e.target.value)} className="filter-input" />
           </Filter>
+          <button
+            onClick={handlePrint}
+            disabled={loading || rows.length === 0}
+            className="rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700 disabled:opacity-40"
+          >
+            Print
+          </button>
         </div>
       </div>
 
