@@ -187,10 +187,10 @@ export function CustomerProductHistoryPage() {
             <tr className="bg-emerald-600">
               {activeProducts.map((product) => (
                 <Fragment key={product.id}>
-                  <th className="min-w-20 border-r border-emerald-400 px-3 py-2 text-right">Kg</th>
+                  <th className="min-w-20 border-r border-emerald-400 px-3 py-2 text-center">Kg</th>
                 </Fragment>
               ))}
-              <th className="sticky right-28 z-20 min-w-20 border-l border-emerald-400 bg-emerald-600 px-3 py-2 text-right">Kg</th>
+              <th className="sticky right-28 z-20 min-w-20 border-l border-emerald-400 bg-emerald-600 px-3 py-2 text-center">Kg</th>
               <th className="sticky right-0 z-20 min-w-28 bg-emerald-600 px-3 py-2 text-right">Amount</th>
             </tr>
           </thead>
@@ -208,11 +208,11 @@ export function CustomerProductHistoryPage() {
                   const value = row.byProduct.get(product.id);
                   return (
                     <Fragment key={product.id}>
-                      <td className="border-r border-gray-100 px-3 py-3 text-right">{value ? number(value.kg) : "—"}</td>
+                      <td className="border-r border-gray-100 px-3 py-3 text-center">{value ? number(value.kg) : "—"}</td>
                     </Fragment>
                   );
                 })}
-                <td className="sticky right-28 border-l border-emerald-100 bg-emerald-50 px-3 py-3 text-right font-semibold">{number(row.kg)}</td>
+                <td className="sticky right-28 border-l border-emerald-100 bg-emerald-50 px-3 py-3 text-center font-semibold">{number(row.kg)}</td>
                 <td className="sticky right-0 bg-emerald-50 px-3 py-3 text-right font-semibold">{money(row.amount)}</td>
               </tr>
             ))}
@@ -225,11 +225,11 @@ export function CustomerProductHistoryPage() {
                   const value = productTotals.get(product.id) ?? { kg: 0, amount: 0 };
                   return (
                     <Fragment key={product.id}>
-                      <td className="border-r border-emerald-200 px-3 py-3 text-right">{number(value.kg)}</td>
+                      <td className="border-r border-emerald-200 px-3 py-3 text-center">{number(value.kg)}</td>
                     </Fragment>
                   );
                 })}
-                <td className="sticky right-28 border-l border-emerald-200 bg-emerald-100 px-3 py-3 text-right">{number(totals.kg)}</td>
+                <td className="sticky right-28 border-l border-emerald-200 bg-emerald-100 px-3 py-3 text-center">{number(totals.kg)}</td>
                 <td className="sticky right-0 bg-emerald-100 px-3 py-3 text-right">{money(totals.amount)}</td>
               </tr>
             </tfoot>
