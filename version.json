@@ -1,6 +1,6 @@
 {
-  "versionName": "1.6.4",
-  "versionCode": 11,
+  "versionName": "1.6.5",
+  "versionCode": 12,
   "downloadUrl": "https://vishwassilk.com/vishwassilk.apk",
-  "releaseNotes": "Customer Accounts: new Print option for the currently applied filters."
+  "releaseNotes": "Fixed: riders can now log pickups for previous dates."
 }
