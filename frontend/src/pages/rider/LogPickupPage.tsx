@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import { useSearchParams } from "react-router-dom";
+import { apiErrorMessage } from "../../api/client";
 import { riderApi } from "../../api/rider.api";
 import type { Customer, CustomerProduct } from "../../api/types";
 
@@ -113,8 +114,8 @@ export function LogPickupPage() {
       setKgValues({});
       setPickupDate(localDateValue());
       setMessage("Pickup logged successfully!");
-    } catch {
-      setError("Could not log pickup. Please try again.");
+    } catch (err) {
+      setError(apiErrorMessage(err, "Could not log pickup. Please try again."));
     } finally {
       setSubmitting(false);
     }
