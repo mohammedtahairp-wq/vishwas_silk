@@ -1,6 +1,6 @@
 {
-  "versionName": "1.6.5",
-  "versionCode": 12,
+  "versionName": "1.6.6",
+  "versionCode": 13,
   "downloadUrl": "https://vishwassilk.com/vishwassilk.apk",
-  "releaseNotes": "Fixed: riders can now log pickups for previous dates."
+  "releaseNotes": "Rider History now shows a report view with all products across the top."
 }

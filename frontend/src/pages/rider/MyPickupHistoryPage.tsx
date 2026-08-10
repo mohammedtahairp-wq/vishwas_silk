@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
 import { riderApi } from "../../api/rider.api";
 import { apiErrorMessage } from "../../api/client";
@@ -7,17 +7,10 @@ import type { PickupSafe } from "../../api/types";
 type Period = "daily" | "weekly" | "monthly";
 type ViewMode = "summary" | "list";
 
-interface ProductRow {
-  productId: string;
-  productName: string;
-  kg: number;
-  pickups: number;
-}
-
-interface CustomerGroup {
+interface ReportRow {
   customerId: string;
   customerName: string;
-  products: ProductRow[];
+  values: Record<string, { kg: number }>;
   totalKg: number;
 }
 
@@ -97,33 +90,34 @@ export function MyPickupHistoryPage() {
       && (!productId || pickup.productId === productId);
   }), [pickups, range, customerId, productId]);
 
-  const groups = useMemo(() => {
-    const map = new Map<string, Map<string, ProductRow>>();
+  const reportRows = useMemo(() => {
+    const rows = new Map<string, ReportRow>();
     for (const pickup of matchingPickups) {
-      const customerId = pickup.customerId;
-      const productId = pickup.productId;
-      if (!map.has(customerId)) map.set(customerId, new Map());
-      const products = map.get(customerId)!;
-      const row = products.get(productId) ?? { productId, productName: pickup.product?.name ?? "Unknown product", kg: 0, pickups: 0 };
-      row.kg += Number(pickup.kg);
-      row.pickups += 1;
-      products.set(productId, row);
+      const row = rows.get(pickup.customerId) ?? {
+        customerId: pickup.customerId,
+        customerName: pickup.customer?.name ?? "Unknown customer",
+        values: {},
+        totalKg: 0,
+      };
+      const kg = Number(pickup.kg);
+      const productValue = row.values[pickup.productId] ?? { kg: 0 };
+      productValue.kg += kg;
+      row.values[pickup.productId] = productValue;
+      row.totalKg += kg;
+      rows.set(pickup.customerId, row);
     }
-    const result: CustomerGroup[] = [];
-    for (const [customerId, products] of map) {
-      const pickup = matchingPickups.find((p) => p.customerId === customerId);
-      const sorted = [...products.values()].sort((a, b) => a.productName.localeCompare(b.productName));
-      result.push({
-        customerId,
-        customerName: pickup?.customer?.name ?? "Unknown customer",
-        products: sorted,
-        totalKg: sorted.reduce((s, p) => s + p.kg, 0),
-      });
-    }
-    return result.sort((a, b) => a.customerName.localeCompare(b.customerName));
+    return [...rows.values()].sort((a, b) => a.customerName.localeCompare(b.customerName));
   }, [matchingPickups]);
 
-  const totalKg = groups.reduce((sum, g) => sum + g.totalKg, 0);
+  const visibleProducts = useMemo(() => {
+    const names = new Map<string, string>();
+    matchingPickups.forEach((p) => {
+      if (!names.has(p.productId)) names.set(p.productId, p.product?.name ?? "Unknown product");
+    });
+    return [...names].sort((a, b) => a[1].localeCompare(b[1])).map(([id, name]) => ({ id, name }));
+  }, [matchingPickups]);
+
+  const totalKg = reportRows.reduce((sum, r) => sum + r.totalKg, 0);
   const periodLabel = period === "daily" ? displayDate(range.from) : `${displayDate(range.from)} – ${displayDate(range.to)}`;
 
   return (
@@ -169,32 +163,48 @@ export function MyPickupHistoryPage() {
 
       {viewMode === "summary" ? (
         <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white shadow-sm">
-          <table className="min-w-full text-sm">
-            <thead className="bg-emerald-700 text-left text-white"><tr><th className="px-4 py-2">Customer</th><th className="px-4 py-2">Product</th><th className="px-4 py-2 text-right">Pickups</th><th className="px-4 py-2 text-right">Quantity</th></tr></thead>
+          <table className="min-w-full whitespace-nowrap text-sm">
+            <thead className="bg-emerald-700 text-left text-white">
+              <tr>
+                <th rowSpan={2} className="border-r border-emerald-500 px-3 py-2">Customer</th>
+                {visibleProducts.map((product) => (
+                  <th key={product.id} className="border-r border-emerald-500 px-3 py-2 text-center">{product.name}</th>
+                ))}
+                <th colSpan={1} className="px-3 py-2 text-center">Total</th>
+              </tr>
+              <tr className="bg-emerald-600 text-xs">
+                {visibleProducts.map((product) => (
+                  <th key={product.id} className="border-r border-emerald-500 px-3 py-2 text-center">Kg</th>
+                ))}
+                <th className="px-3 py-2 text-center">Kg</th>
+              </tr>
+            </thead>
             <tbody>
-              {loading ? <Empty text="Loading history..." /> : groups.length === 0 ? <Empty text="No pickups found for this period and filters." /> : groups.map((group) => (
-                <Fragment key={group.customerId}>
-                  {group.products.map((product, pIdx) => (
-                    <tr key={product.productId} className="border-t border-gray-100 hover:bg-gray-50">
-                      {pIdx === 0 && (
-                        <td className="px-4 py-2 font-medium text-gray-900" rowSpan={group.products.length}>
-                          {group.customerName}
-                        </td>
-                      )}
-                      <td className="px-4 py-2">{product.productName}</td>
-                      <td className="px-4 py-2 text-right">{product.pickups}</td>
-                      <td className="px-4 py-2 text-right font-medium">{number(product.kg)} kg</td>
-                    </tr>
+              {loading ? (
+                <tr><td colSpan={2 + visibleProducts.length} className="px-4 py-8 text-center text-gray-400">Loading history...</td></tr>
+              ) : reportRows.length === 0 ? (
+                <tr><td colSpan={2 + visibleProducts.length} className="px-4 py-8 text-center text-gray-400">No pickups found for this period and filters.</td></tr>
+              ) : reportRows.map((row) => (
+                <tr key={row.customerId} className="border-t border-gray-100 hover:bg-gray-50">
+                  <td className="border-r border-gray-200 px-3 py-2 font-medium text-gray-900">{row.customerName}</td>
+                  {visibleProducts.map((product) => (
+                    <td key={product.id} className="border-r border-gray-200 px-3 py-2 text-center">{number(row.values[product.id]?.kg ?? 0)}</td>
                   ))}
-                  <tr className="bg-emerald-50 text-sm font-semibold">
-                    <td colSpan={2} className="px-4 py-2 text-emerald-800">Subtotal — {group.customerName}</td>
-                    <td className="px-4 py-2 text-right text-emerald-800">{group.products.reduce((s, p) => s + p.pickups, 0)}</td>
-                    <td className="px-4 py-2 text-right text-emerald-800">{number(group.totalKg)} kg</td>
-                  </tr>
-                </Fragment>
+                  <td className="bg-gray-50 px-3 py-2 text-center font-medium">{number(row.totalKg)}</td>
+                </tr>
               ))}
             </tbody>
-            {!loading && groups.length > 0 && <tfoot><tr className="border-t-2 border-emerald-700 bg-emerald-50 font-semibold"><td colSpan={2} className="px-4 py-3">TOTAL</td><td className="px-4 py-3 text-right">{matchingPickups.length}</td><td className="px-4 py-3 text-right">{number(totalKg)} kg</td></tr></tfoot>}
+            {!loading && reportRows.length > 0 && (
+              <tfoot>
+                <tr className="border-t-2 border-emerald-700 bg-emerald-50 font-semibold">
+                  <td className="px-3 py-3">TOTAL</td>
+                  {visibleProducts.map((product) => (
+                    <td key={product.id} className="px-3 py-3 text-center">{number(reportRows.reduce((s, r) => s + (r.values[product.id]?.kg ?? 0), 0))}</td>
+                  ))}
+                  <td className="px-3 py-3 text-center">{number(totalKg)}</td>
+                </tr>
+              </tfoot>
+            )}
           </table>
         </div>
       ) : (
@@ -284,10 +294,6 @@ export function MyPickupHistoryPage() {
       )}
     </div>
   );
-}
-
-function Empty({ text }: { text: string }) {
-  return <tr><td colSpan={4} className="px-4 py-10 text-center text-gray-400">{text}</td></tr>;
 }
 
 interface EditPickupModalProps {
