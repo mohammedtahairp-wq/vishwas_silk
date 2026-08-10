@@ -1,6 +1,6 @@
 {
-  "versionName": "1.6.6",
-  "versionCode": 13,
+  "versionName": "1.6.7",
+  "versionCode": 14,
   "downloadUrl": "https://vishwassilk.com/vishwassilk.apk",
-  "releaseNotes": "Rider History now shows a report view with all products across the top."
+  "releaseNotes": "Fixed the in-app update check (network error) so version updates are detected."
 }
