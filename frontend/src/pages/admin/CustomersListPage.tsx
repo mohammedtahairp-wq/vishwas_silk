@@ -360,6 +360,8 @@ function EditCustomerModal({ customer, cities, products, onClose, onSaved }: { c
   const [address, setAddress] = useState(customer.address);
   const [villageArea, setVillageArea] = useState(customer.villageArea ?? "");
   const [status, setStatus] = useState<Customer["status"]>(customer.status);
+  const [loginUsername, setLoginUsername] = useState("");
+  const [loginPassword, setLoginPassword] = useState("");
   const [productPrices, setProductPrices] = useState<{ productId: string; pricePerKg: string }[]>([]);
   const [loadedPrices, setLoadedPrices] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -391,6 +393,12 @@ function EditCustomerModal({ customer, cities, products, onClose, onSaved }: { c
       });
       if (status !== customer.status) {
         await adminApi.setCustomerStatus(customer.id, status);
+      }
+      if (loginUsername.trim() || loginPassword) {
+        await adminApi.setCustomerLogin(customer.id, {
+          username: loginUsername.trim() || undefined,
+          password: loginPassword || undefined,
+        });
       }
       onSaved();
     } catch (err) {
@@ -425,6 +433,34 @@ function EditCustomerModal({ customer, cities, products, onClose, onSaved }: { c
             <option value="inactive">Inactive</option>
           </select>
         </Field>
+        <div className="border-t border-gray-100 pt-3">
+          <label className="text-xs font-semibold text-gray-700">
+            Login credentials{" "}
+            {customer.hasLogin ? (
+              <span className="font-normal text-emerald-600">(already created — fill to change)</span>
+            ) : (
+              <span className="font-normal text-gray-400">(not created yet)</span>
+            )}
+          </label>
+          {!customer.hasLogin && (
+            <p className="mb-2 text-xs text-gray-400">Create a username and password so this customer can log in.</p>
+          )}
+          <div className="grid grid-cols-2 gap-2">
+            <input
+              placeholder="Username"
+              className="w-full border border-gray-300 rounded px-2 py-1.5"
+              value={loginUsername}
+              onChange={(e) => setLoginUsername(e.target.value)}
+            />
+            <input
+              type="password"
+              placeholder="Password (min 8 characters)"
+              className="w-full border border-gray-300 rounded px-2 py-1.5"
+              value={loginPassword}
+              onChange={(e) => setLoginPassword(e.target.value)}
+            />
+          </div>
+        </div>
         <div className="border-t border-gray-100 pt-3">
           <div className="flex items-center justify-between mb-2">
             <label className="text-xs font-semibold text-gray-700">Products &amp; Rates</label>

@@ -1,5 +1,5 @@
 import { prisma } from "../../../lib/prisma";
-import { ConflictError, ForbiddenError, NotFoundError } from "../../../lib/errors";
+import { BadRequestError, ConflictError, ForbiddenError, NotFoundError } from "../../../lib/errors";
 import bcrypt from "bcrypt";
 
 interface ProductPriceInput {
@@ -32,6 +32,11 @@ interface ListCustomersFilter {
   riderId?: string;
   status?: "active" | "inactive";
   search?: string;
+}
+
+interface SetCustomerLoginInput {
+  username?: string;
+  password?: string;
 }
 
 async function generateSerialNumber(city?: string | null): Promise<string> {
@@ -89,8 +94,8 @@ export async function createCustomer(input: CreateCustomerInput) {
   });
 }
 
-export function listCustomers(filter: ListCustomersFilter) {
-  return prisma.customer.findMany({
+export async function listCustomers(filter: ListCustomersFilter) {
+  const customers = await prisma.customer.findMany({
     where: {
       assignedRiderId: filter.riderId,
       status: filter.status,
@@ -107,6 +112,8 @@ export function listCustomers(filter: ListCustomersFilter) {
     include: { assignedRider: true },
     orderBy: { createdAt: "desc" },
   });
+  const withLogin = await customerLoginSet(customers.map((c) => c.id));
+  return customers.map((c) => ({ ...c, hasLogin: withLogin.has(c.id) }));
 }
 
 export async function getCustomerById(id: string) {
@@ -117,7 +124,20 @@ export async function getCustomerById(id: string) {
   if (!customer) {
     throw new NotFoundError("Customer not found");
   }
-  return customer;
+  const user = await prisma.user.findFirst({
+    where: { linkedId: id, role: "customer" },
+    select: { id: true },
+  });
+  return { ...customer, hasLogin: Boolean(user) };
+}
+
+async function customerLoginSet(customerIds: string[]): Promise<Set<string>> {
+  if (customerIds.length === 0) return new Set();
+  const users = await prisma.user.findMany({
+    where: { role: "customer", linkedId: { in: customerIds } },
+    select: { linkedId: true },
+  });
+  return new Set(users.map((u) => u.linkedId as string));
 }
 
 export async function updateCustomer(id: string, input: UpdateCustomerInput) {
@@ -143,6 +163,50 @@ export async function updateCustomer(id: string, input: UpdateCustomerInput) {
   }
 
   return customer;
+}
+
+export async function setCustomerLogin(id: string, input: SetCustomerLoginInput) {
+  await getCustomerById(id);
+
+  const username = input.username?.trim().toLowerCase();
+  const password = input.password;
+  if (!username && !password) {
+    throw new BadRequestError("Provide a username, a password, or both");
+  }
+
+  const existingUser = await prisma.user.findFirst({
+    where: { linkedId: id, role: "customer" },
+  });
+
+  if (!existingUser) {
+    if (!username || !password) {
+      throw new BadRequestError("Creating a login requires both a username and a password");
+    }
+    await assertUsernameFree(username);
+    const passwordHash = await bcrypt.hash(password, 12);
+    const user = await prisma.user.create({
+      data: { username, passwordHash, role: "customer", linkedId: id },
+    });
+    return { username: user.username, created: true };
+  }
+
+  const data: { username?: string; passwordHash?: string } = {};
+  if (username && username !== existingUser.username) {
+    await assertUsernameFree(username, existingUser.id);
+    data.username = username;
+  }
+  if (password) {
+    data.passwordHash = await bcrypt.hash(password, 12);
+  }
+  await prisma.user.update({ where: { id: existingUser.id }, data });
+  return { username: data.username ?? existingUser.username, created: false };
+}
+
+async function assertUsernameFree(username: string, excludeId?: string) {
+  const existing = await prisma.user.findUnique({ where: { username } });
+  if (existing && existing.id !== excludeId) {
+    throw new ConflictError("That username is already in use");
+  }
 }
 
 export async function deleteCustomer(id: string) {

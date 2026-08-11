@@ -20,6 +20,13 @@ const createSchema = z.object({
 
 const updateSchema = createSchema.partial();
 
+const loginSchema = z
+  .object({
+    username: z.string().trim().min(3).max(50).regex(/^[a-zA-Z0-9._-]+$/, "Username may only contain letters, numbers, dots, underscores and hyphens").optional(),
+    password: z.string().min(8, "Password must be at least 8 characters").optional(),
+  })
+  .refine((data) => data.username || data.password, { message: "Provide a username, a password, or both" });
+
 const assignRiderSchema = z.object({
   rider_id: z.string().uuid().nullable(),
 });
@@ -55,6 +62,12 @@ export async function updateCustomerHandler(req: Request, res: Response) {
   const body = updateSchema.parse(req.body);
   const customer = await customersService.updateCustomer(req.params.id, { ...body, createdById: req.user!.id });
   res.json(customer);
+}
+
+export async function setCustomerLoginHandler(req: Request, res: Response) {
+  const body = loginSchema.parse(req.body);
+  const result = await customersService.setCustomerLogin(req.params.id, body);
+  res.json(result);
 }
 
 export async function deleteCustomerHandler(req: Request, res: Response) {

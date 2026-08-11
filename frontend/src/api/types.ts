@@ -22,6 +22,7 @@ export interface Customer {
   assignedRiderId?: string | null;
   assignedRider?: Rider | null;
   status: "active" | "inactive";
+  hasLogin?: boolean;
   createdAt: string;
 }
 

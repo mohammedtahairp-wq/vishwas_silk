@@ -21,6 +21,8 @@ export const adminApi = {
     apiClient.put<Customer>(`/admin/customers/${id}/assign-rider`, { rider_id: riderId }).then((r) => r.data),
   setCustomerStatus: (id: string, status: "active" | "inactive") =>
     apiClient.put<Customer>(`/admin/customers/${id}/status`, { status }).then((r) => r.data),
+  setCustomerLogin: (id: string, data: { username?: string; password?: string }) =>
+    apiClient.put<{ username: string; created: boolean }>(`/admin/customers/${id}/login`, data).then((r) => r.data),
 
   createRider: (data: { name: string; phone: string; villageArea?: string; username: string; password: string }) =>
     apiClient.post<CreateRiderResult>("/admin/riders", data).then((r) => r.data),
