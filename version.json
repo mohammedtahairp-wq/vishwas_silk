@@ -1,6 +1,6 @@
 {
-  "versionName": "1.6.7",
-  "versionCode": 14,
+  "versionName": "1.6.8",
+  "versionCode": 15,
   "downloadUrl": "https://vishwassilk.com/vishwassilk.apk",
-  "releaseNotes": "Fixed the in-app update check (network error) so version updates are detected."
+  "releaseNotes": "Admin can now create or reset customer login credentials from the edit customer section."
 }
