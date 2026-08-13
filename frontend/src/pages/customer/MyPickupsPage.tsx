@@ -42,15 +42,11 @@ export function MyPickupsPage() {
       grouped.set(date, byProduct);
     }
     return [...grouped.entries()]
-      .map(([date, byProduct]) => ({
-        date,
-        byProduct,
-        kg: [...byProduct.values()].reduce((sum, value) => sum + value, 0),
-      }))
+      .map(([date, byProduct]) => ({ date, byProduct }))
       .sort((a, b) => b.date.localeCompare(a.date));
   }, [pickups]);
 
-  const columnCount = products.length + 2;
+  const columnCount = products.length + 1;
 
   return (
     <div className="space-y-5">
@@ -71,9 +67,6 @@ export function MyPickupsPage() {
                   {product.name}
                 </th>
               ))}
-              <th className="min-w-32 border-l border-emerald-500 bg-emerald-700 px-3 py-3 text-center text-base font-semibold">
-                Total
-              </th>
             </tr>
             <tr className="bg-emerald-600">
               {products.map((product) => (
@@ -81,9 +74,6 @@ export function MyPickupsPage() {
                   Kg
                 </th>
               ))}
-              <th className="min-w-20 border-l border-emerald-400 bg-emerald-600 px-3 py-2 text-center">
-                Kg
-              </th>
             </tr>
           </thead>
           <tbody>
@@ -105,7 +95,6 @@ export function MyPickupsPage() {
                       </Fragment>
                     );
                   })}
-                  <td className="border-l border-emerald-100 bg-emerald-50 px-3 py-3 text-center font-semibold">{number(row.kg)}</td>
                 </tr>
               ))
             )}
