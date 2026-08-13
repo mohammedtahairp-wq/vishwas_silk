@@ -35,6 +35,7 @@ export function DashboardHome() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [city, setCity] = useState("");
+  const [cityFilterOptions, setCityFilterOptions] = useState<string[]>([]);
   const [fromDate, setFromDate] = useState(() => dateInputValue(new Date(new Date().getFullYear(), new Date().getMonth(), 1)));
   const [toDate, setToDate] = useState(() => dateInputValue(new Date()));
 
@@ -45,11 +46,13 @@ export function DashboardHome() {
       adminApi.listCustomers(),
       adminApi.listPickups({ from: fromDate, to: toDate }),
       adminApi.listSettlements().catch(() => [] as Transaction[]),
+      adminApi.listCities().catch(() => []),
     ])
-      .then(([c, p, s]) => {
+      .then(([c, p, s, cityRows]) => {
         setCustomers(c);
         setPickups(p);
         setSettlements(s);
+        setCityFilterOptions(cityRows.map((row) => row.name).sort((a, b) => a.localeCompare(b)));
       })
       .catch(() => setError("Could not load dashboard data. Please try again."))
       .finally(() => setLoading(false));
@@ -163,7 +166,7 @@ export function DashboardHome() {
   if (loading) {
     return (
       <div className="space-y-6">
-        <Header cities={[]} city="" onCity={() => {}} fromDate={fromDate} toDate={toDate} onFromDate={setFromDate} onToDate={setToDate} />
+        <Header cities={cityFilterOptions} city="" onCity={() => {}} fromDate={fromDate} toDate={toDate} onFromDate={setFromDate} onToDate={setToDate} />
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4">
           {Array.from({ length: 4 }).map((_, i) => (
             <div key={i} className="h-32 rounded-2xl border border-white/60 bg-white/50" style={{ animation: "shimmer 2s infinite", backgroundImage: "linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.6) 50%, rgba(255,255,255,0) 100%)", backgroundSize: "200% 100%" }} />
@@ -180,7 +183,7 @@ export function DashboardHome() {
   if (error) {
     return (
       <div className="space-y-6">
-        <Header cities={[]} city="" onCity={() => {}} fromDate={fromDate} toDate={toDate} onFromDate={setFromDate} onToDate={setToDate} />
+        <Header cities={cityFilterOptions} city="" onCity={() => {}} fromDate={fromDate} toDate={toDate} onFromDate={setFromDate} onToDate={setToDate} />
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -205,7 +208,7 @@ export function DashboardHome() {
   return (
     <div className="space-y-6">
       <Header
-        cities={cities}
+        cities={cityFilterOptions}
         city={city}
         onCity={setCity}
         fromDate={fromDate}
