@@ -163,7 +163,43 @@ export function CustomerProductHistoryPage() {
           {!loading && dateRows.length > 0 && (
             <tfoot>
               <tr className="border-t-2 border-emerald-600 bg-emerald-100 font-semibold text-gray-900">
-                <td colSpan={columnCount} className="sticky left-0 bg-emerald-100 px-4 py-3">TOTAL</td>
+                <td className="sticky left-0 bg-emerald-100 px-4 py-3">TOTAL</td>
+                {activeProducts.map((product) => {
+                  const value = productTotals.get(product.id) ?? { kg: 0, amount: 0 };
+                  return (
+                    <Fragment key={product.id}>
+                      <td className="border-r border-emerald-200 px-3 py-3 text-center">{number(value.kg)}</td>
+                    </Fragment>
+                  );
+                })}
+                <td className="bg-emerald-100" />
+              </tr>
+              <tr className="bg-emerald-50 font-medium text-gray-700">
+                <td className="sticky left-0 bg-emerald-50 px-4 py-3">Rate</td>
+                {activeProducts.map((product) => {
+                  const value = productTotals.get(product.id) ?? { kg: 0, amount: 0 };
+                  return (
+                    <Fragment key={product.id}>
+                      <td className="border-r border-emerald-100 px-3 py-3 text-center">{value.kg ? money(value.amount / value.kg) : "—"}</td>
+                    </Fragment>
+                  );
+                })}
+                <td className="bg-emerald-50" />
+              </tr>
+              <tr className="bg-emerald-50 font-medium text-gray-700">
+                <td className="sticky left-0 bg-emerald-50 px-4 py-3">Amount</td>
+                {activeProducts.map((product) => {
+                  const value = productTotals.get(product.id) ?? { kg: 0, amount: 0 };
+                  return (
+                    <Fragment key={product.id}>
+                      <td className="border-r border-emerald-100 px-3 py-3 text-center">{money(value.amount)}</td>
+                    </Fragment>
+                  );
+                })}
+                <td className="bg-emerald-50" />
+              </tr>
+              <tr className="border-t-2 border-emerald-600 bg-emerald-100 font-semibold text-gray-900">
+                <td colSpan={columnCount} className="sticky left-0 bg-emerald-100 px-4 py-3">GRAND TOTAL</td>
                 <td className="bg-emerald-100 px-3 py-3 text-right">{money(totals.amount)}</td>
               </tr>
             </tfoot>
