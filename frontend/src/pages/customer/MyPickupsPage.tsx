@@ -4,27 +4,32 @@ import type { PickupSafe } from "../../api/types";
 
 type Tab = "daily" | "monthly" | "product";
 
+const number = (value: number) => value.toLocaleString("en-IN", { maximumFractionDigits: 2 });
+
 export function MyPickupsPage() {
   const [pickups, setPickups] = useState<PickupSafe[]>([]);
   const [tab, setTab] = useState<Tab>("daily");
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    customerApi.myPickups().then(setPickups);
+    customerApi
+      .myPickups()
+      .then(setPickups)
+      .finally(() => setLoading(false));
   }, []);
 
-  const dailyGroups = useMemo(() => {
-    const map = new Map<string, { date: Date; items: { id: string; product: string; kg: number }[] }>();
-    for (const p of pickups) {
-      const date = new Date(p.pickupDate);
-      const key = date.toDateString();
-      const entry = map.get(key) ?? { date, items: [] };
-      entry.items.push({ id: p.id, product: p.product?.name ?? "Unknown product", kg: Number(p.kg) });
-      map.set(key, entry);
-    }
-    return [...map.values()].sort((a, b) => b.date.getTime() - a.date.getTime());
-  }, [pickups]);
-
   const totalKg = useMemo(() => pickups.reduce((sum, p) => sum + Number(p.kg), 0), [pickups]);
+
+  const dailyRows = useMemo(
+    () =>
+      pickups.map((p) => ({
+        id: p.id,
+        date: new Date(p.pickupDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }),
+        product: p.product?.name ?? "Unknown product",
+        kg: Number(p.kg),
+      })),
+    [pickups],
+  );
 
   const grouped = useMemo(() => {
     const buckets = new Map<string, { label: string; kg: number }>();
@@ -63,64 +68,65 @@ export function MyPickupsPage() {
         ))}
       </div>
 
-      {tab === "daily" ? (
-        <div className="space-y-3">
-          {dailyGroups.length === 0 ? (
-            <div className="rounded-lg border border-gray-200 bg-white p-6 text-center text-sm text-gray-400">
-              No pickups yet.
-            </div>
-          ) : (
-            <>
-              {dailyGroups.map((group) => (
-                <div key={group.date.toDateString()} className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
-                  <div className="text-sm font-semibold text-emerald-700">
-                    {group.date.toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short", year: "numeric" })}
-                  </div>
-                  <div className="mt-2 space-y-2">
-                    {group.items.map((item) => (
-                      <div key={item.id} className="border-l-2 border-emerald-100 pl-3">
-                        <div className="text-sm text-gray-700">{item.product}</div>
-                        <div className="text-sm font-semibold tabular-nums text-gray-900">{item.kg} kg</div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ))}
-              <div className="flex items-center justify-between rounded-lg bg-emerald-600 px-4 py-3 text-white shadow-sm">
-                <span className="text-sm font-semibold uppercase tracking-wide">Total</span>
-                <span className="text-lg font-bold tabular-nums">{totalKg} kg</span>
-              </div>
-            </>
-          )}
-        </div>
-      ) : (
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-x-auto">
-        <table className="min-w-full text-sm">
-          <thead className="bg-gray-50 text-gray-600 text-left">
+      <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white shadow-sm">
+        <table className="min-w-full whitespace-nowrap text-sm">
+          <thead className="bg-emerald-700 text-left text-white">
             <tr>
-              <th className="px-4 py-2">{tab === "monthly" ? "Month" : "Product"}</th>
-              <th className="px-4 py-2">Total Kg</th>
+              <th className="px-3 py-2">{tab === "daily" ? "Date" : tab === "monthly" ? "Month" : "Product"}</th>
+              {tab === "daily" && <th className="px-3 py-2">Product</th>}
+              <th className="px-3 py-2 text-center">Total Kg</th>
             </tr>
           </thead>
           <tbody>
-            {grouped.length === 0 ? (
+            {loading ? (
               <tr>
-                <td className="px-4 py-4 text-gray-400" colSpan={2}>
+                <td colSpan={tab === "daily" ? 3 : 2} className="px-4 py-8 text-center text-gray-400">
+                  Loading pickups...
+                </td>
+              </tr>
+            ) : tab === "daily" ? (
+              dailyRows.length === 0 ? (
+                <tr>
+                  <td colSpan={3} className="px-4 py-8 text-center text-gray-400">
+                    No pickups yet.
+                  </td>
+                </tr>
+              ) : (
+                dailyRows.map((row) => (
+                  <tr key={row.id} className="border-t border-gray-100 hover:bg-gray-50">
+                    <td className="px-3 py-2">{row.date}</td>
+                    <td className="px-3 py-2">{row.product}</td>
+                    <td className="px-3 py-2 text-center">{number(row.kg)}</td>
+                  </tr>
+                ))
+              )
+            ) : grouped.length === 0 ? (
+              <tr>
+                <td colSpan={2} className="px-4 py-8 text-center text-gray-400">
                   No pickups yet.
                 </td>
               </tr>
             ) : (
               grouped.map((g) => (
-                <tr key={g.key} className="border-t border-gray-100">
-                  <td className="px-4 py-2">{g.label}</td>
-                  <td className="px-4 py-2">{g.kg}</td>
+                <tr key={g.key} className="border-t border-gray-100 hover:bg-gray-50">
+                  <td className="px-3 py-2">{g.label}</td>
+                  <td className="px-3 py-2 text-center">{number(g.kg)}</td>
                 </tr>
               ))
             )}
           </tbody>
+          {!loading && (dailyRows.length > 0 || grouped.length > 0) && (
+            <tfoot>
+              <tr className="border-t-2 border-emerald-600 bg-emerald-50 font-semibold">
+                <td className="px-3 py-2" colSpan={tab === "daily" ? 2 : 1}>
+                  TOTAL
+                </td>
+                <td className="px-3 py-2 text-center">{number(totalKg)}</td>
+              </tr>
+            </tfoot>
+          )}
         </table>
       </div>
-      )}
     </div>
   );
 }
