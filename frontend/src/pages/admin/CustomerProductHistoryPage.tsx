@@ -71,7 +71,7 @@ function buildHistoryPrintHtml(opts: {
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<title>Customer Product History</title>
+<title>${escapeHtml(customer?.name || "Customer Product History")}</title>
 <style>
   @page { size: A4 landscape; margin: 12mm; }
   * { box-sizing: border-box; }
