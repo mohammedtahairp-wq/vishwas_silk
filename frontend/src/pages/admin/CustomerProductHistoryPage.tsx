@@ -14,6 +14,127 @@ const money = (value: number | string) =>
 const number = (value: number | string) =>
   Number(value).toLocaleString("en-IN", { maximumFractionDigits: 2 });
 
+const escapeHtml = (value: string) =>
+  value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+
+const printDate = (value: string) => new Date(`${value}T00:00:00`).toLocaleDateString("en-IN");
+
+function buildHistoryPrintHtml(opts: {
+  customer: Customer | null;
+  dateRows: { date: string; byProduct: Map<string, { kg: number; amount: number }> }[];
+  activeProducts: Product[];
+  productTotals: Map<string, { kg: number; amount: number }>;
+  totals: { kg: number; amount: number };
+  city: string;
+  from: string;
+  to: string;
+}) {
+  const { customer, dateRows, activeProducts, productTotals, totals, city, from, to } = opts;
+  const generatedAt = new Date().toLocaleString("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+  const rowCells = dateRows
+    .map((row) => {
+      const cells = activeProducts
+        .map((product) => {
+          const value = row.byProduct.get(product.id);
+          return `<td class="num">${value ? number(value.kg) : "—"}</td>`;
+        })
+        .join("");
+      return `<tr><td>${printDate(row.date)}</td>${cells}</tr>`;
+    })
+    .join("");
+  const productCells = activeProducts
+    .map((product) => {
+      const value = productTotals.get(product.id) ?? { kg: 0, amount: 0 };
+      return `<td class="num">${number(value.kg)}</td>`;
+    })
+    .join("");
+  const rateCells = activeProducts
+    .map((product) => {
+      const value = productTotals.get(product.id) ?? { kg: 0, amount: 0 };
+      return `<td class="num">${value.kg ? money(value.amount / value.kg) : "—"}</td>`;
+    })
+    .join("");
+  const amountCells = activeProducts
+    .map((product) => {
+      const value = productTotals.get(product.id) ?? { kg: 0, amount: 0 };
+      return `<td class="num">${money(value.amount)}</td>`;
+    })
+    .join("");
+
+  return `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Customer Product History</title>
+<style>
+  @page { size: A4 landscape; margin: 12mm; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: "Segoe UI", Arial, sans-serif; color: #111827; }
+  .report-header { background: #065f46; color: #fff; padding: 16px 22px; }
+  .report-header h1 { margin: 0; font-size: 20px; letter-spacing: 0.3px; }
+  .report-header p { margin: 4px 0 0; font-size: 12px; opacity: 0.9; }
+  .meta { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px; padding: 10px 22px; background: #f3f4f6; font-size: 12px; }
+  table { width: calc(100% - 44px); margin: 16px 22px 0; border-collapse: collapse; font-size: 12px; }
+  th, td { border: 1px solid #d1d5db; padding: 6px 9px; text-align: left; }
+  th { background: #065f46; color: #fff; font-size: 11px; text-transform: uppercase; letter-spacing: 0.4px; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  tbody tr:nth-child(even) td { background: #f9fafb; }
+  tr.total td { background: #d1fae5; font-weight: 700; }
+  tr.grand td { background: #d1fae5; font-weight: 700; font-size: 13px; }
+  tr.rate td, tr.amount td { background: #ecfdf5; font-weight: 500; }
+  .footer { margin: 16px 22px; font-size: 11px; color: #6b7280; }
+</style>
+</head>
+<body>
+  <div class="report-header">
+    <h1>VISHWAS SILK — Customer Product History</h1>
+    <p>${escapeHtml(customer?.name ?? "")} · ${escapeHtml(customer?.phone ?? "")} · ${escapeHtml(customer?.villageArea || "Unspecified")}</p>
+  </div>
+  <div class="meta">
+    <span><strong>Period:</strong> ${printDate(from)} – ${printDate(to)}</span>
+    <span><strong>City:</strong> ${escapeHtml(city || "All cities")}</span>
+    <span><strong>Generated on:</strong> ${escapeHtml(generatedAt)}</span>
+  </div>
+  <table>
+    <thead>
+      <tr>
+        <th>Date</th>
+        ${activeProducts.map((product) => `<th>${escapeHtml(product.name)}</th>`).join("")}
+      </tr>
+    </thead>
+    <tbody>
+      ${rowCells}
+    </tbody>
+    <tfoot>
+      <tr class="total">
+        <td>TOTAL</td>
+        ${productCells}
+      </tr>
+      <tr class="rate">
+        <td>Rate</td>
+        ${rateCells}
+      </tr>
+      <tr class="amount">
+        <td>Amount</td>
+        ${amountCells}
+      </tr>
+      <tr class="grand">
+        <td colspan="${activeProducts.length}">GRAND TOTAL</td>
+        <td class="num">${money(totals.amount)}</td>
+      </tr>
+    </tfoot>
+  </table>
+  <p class="footer">Printed from VISHWAS SILK · https://manage.vishwassilk.com</p>
+</body>
+</html>`;
+}
+
 export function CustomerProductHistoryPage() {
   const { id } = useParams<{ id: string }>();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -96,6 +217,25 @@ export function CustomerProductHistoryPage() {
   if (city) backParams.set("city", city);
   const columnCount = activeProducts.length + 1;
 
+  function handlePrint() {
+    const html = buildHistoryPrintHtml({
+      customer,
+      dateRows,
+      activeProducts,
+      productTotals,
+      totals,
+      city,
+      from,
+      to,
+    });
+    const win = window.open("", "_blank", "width=1000,height=700");
+    if (!win) { setError("Pop-ups are blocked. Allow pop-ups for this site to print."); return; }
+    win.document.write(html);
+    win.document.close();
+    win.focus();
+    win.onload = () => { win.print(); };
+  }
+
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-end justify-between gap-4">
@@ -114,6 +254,13 @@ export function CustomerProductHistoryPage() {
             <input type="date" value={to} min={from} onChange={(e) => updateDate("to", e.target.value)} className="filter-input w-full min-w-0" />
           </Filter>
         </div>
+        <button
+          onClick={handlePrint}
+          disabled={loading || dateRows.length === 0}
+          className="rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700 disabled:opacity-40"
+        >
+          Print
+        </button>
       </div>
 
       {error && <p className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p>}
