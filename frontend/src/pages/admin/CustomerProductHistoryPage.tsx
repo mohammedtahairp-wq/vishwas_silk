@@ -77,6 +77,7 @@ function buildHistoryPrintHtml(opts: {
   * { box-sizing: border-box; }
   body { margin: 0; font-family: "Segoe UI", Arial, sans-serif; color: #111827; }
   .report-header { background: #065f46; color: #fff; padding: 16px 22px; }
+  .report-header .logo { display: block; height: 48px; width: auto; margin-bottom: 10px; }
   .report-header h1 { margin: 0; font-size: 20px; letter-spacing: 0.3px; }
   .report-header p { margin: 4px 0 0; font-size: 12px; opacity: 0.9; }
   .meta { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px; padding: 10px 22px; background: #f3f4f6; font-size: 12px; }
@@ -93,7 +94,8 @@ function buildHistoryPrintHtml(opts: {
 </head>
 <body>
   <div class="report-header">
-    <h1>VISHWAS SILK — Customer Product History</h1>
+    <img class="logo" src="https://manage.vishwassilk.com/logo.jpeg" alt="VISHWAS SILK" />
+    <h1>VISHWAS SILK</h1>
     <p>${escapeHtml(customer?.name ?? "")} · ${escapeHtml(customer?.phone ?? "")} · ${escapeHtml(customer?.villageArea || "Unspecified")}</p>
   </div>
   <div class="meta">
