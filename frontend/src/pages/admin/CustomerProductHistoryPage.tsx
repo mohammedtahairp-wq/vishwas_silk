@@ -50,6 +50,7 @@ export function CustomerProductHistoryPage() {
   }), [pickups]);
 
   const productTotals = useMemo(() => {
+
     const result = new Map<string, { kg: number; amount: number }>();
     for (const product of products) result.set(product.id, { kg: 0, amount: 0 });
     for (const pickup of pickups) {
@@ -81,12 +82,7 @@ export function CustomerProductHistoryPage() {
       grouped.set(date, byProduct);
     }
     return [...grouped.entries()]
-      .map(([date, byProduct]) => ({
-        date,
-        byProduct,
-        kg: [...byProduct.values()].reduce((sum, value) => sum + value.kg, 0),
-        amount: [...byProduct.values()].reduce((sum, value) => sum + value.amount, 0),
-      }))
+      .map(([date, byProduct]) => ({ date, byProduct }))
       .sort((a, b) => b.date.localeCompare(a.date));
   }, [pickups]);
 
@@ -98,7 +94,7 @@ export function CustomerProductHistoryPage() {
 
   const backParams = new URLSearchParams({ from, to });
   if (city) backParams.set("city", city);
-  const columnCount = activeProducts.length + 3;
+  const columnCount = activeProducts.length + 1;
 
   return (
     <div className="space-y-5">
@@ -122,11 +118,6 @@ export function CustomerProductHistoryPage() {
 
       {error && <p className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p>}
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <Stat label="Total quantity" value={`${number(totals.kg)} kg`} />
-        <Stat label="Total amount" value={money(totals.amount)} />
-      </div>
-
       <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white shadow-sm">
         <table className="min-w-max text-sm">
           <thead className="text-white">
@@ -139,9 +130,6 @@ export function CustomerProductHistoryPage() {
                   {product.name}
                 </th>
               ))}
-              <th colSpan={2} className="min-w-48 border-l border-emerald-500 bg-emerald-700 px-3 py-3 text-center text-base font-semibold">
-                Total
-              </th>
             </tr>
             <tr className="bg-emerald-600">
               {activeProducts.map((product) => (
@@ -149,8 +137,6 @@ export function CustomerProductHistoryPage() {
                   <th className="min-w-20 border-r border-emerald-400 px-3 py-2 text-center">Kg</th>
                 </Fragment>
               ))}
-              <th className="min-w-20 border-l border-emerald-400 bg-emerald-600 px-3 py-2 text-center">Kg</th>
-              <th className="min-w-28 bg-emerald-600 px-3 py-2 text-right">Amount</th>
             </tr>
           </thead>
           <tbody>
@@ -171,24 +157,13 @@ export function CustomerProductHistoryPage() {
                     </Fragment>
                   );
                 })}
-                <td className="border-l border-emerald-100 bg-emerald-50 px-3 py-3 text-center font-semibold">{number(row.kg)}</td>
-                <td className="bg-emerald-50 px-3 py-3 text-right font-semibold">{money(row.amount)}</td>
               </tr>
             ))}
           </tbody>
           {!loading && dateRows.length > 0 && (
             <tfoot>
               <tr className="border-t-2 border-emerald-600 bg-emerald-100 font-semibold text-gray-900">
-                <td className="sticky left-0 bg-emerald-100 px-4 py-3">TOTAL</td>
-                {activeProducts.map((product) => {
-                  const value = productTotals.get(product.id) ?? { kg: 0, amount: 0 };
-                  return (
-                    <Fragment key={product.id}>
-                      <td className="border-r border-emerald-200 px-3 py-3 text-center">{number(value.kg)}</td>
-                    </Fragment>
-                  );
-                })}
-                <td className="border-l border-emerald-200 bg-emerald-100 px-3 py-3 text-center">{number(totals.kg)}</td>
+                <td colSpan={columnCount} className="sticky left-0 bg-emerald-100 px-4 py-3">TOTAL</td>
                 <td className="bg-emerald-100 px-3 py-3 text-right">{money(totals.amount)}</td>
               </tr>
             </tfoot>
@@ -201,10 +176,6 @@ export function CustomerProductHistoryPage() {
 
 function Filter({ label, children }: { label: string; children: React.ReactNode }) {
   return <label className="flex flex-col gap-1 text-xs font-medium text-gray-600">{label}{children}</label>;
-}
-
-function Stat({ label, value }: { label: string; value: string }) {
-  return <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm"><p className="text-xs uppercase tracking-wide text-gray-500">{label}</p><p className="mt-1 text-2xl font-semibold text-gray-900">{value}</p></div>;
 }
 
 function Empty({ text, columns }: { text: string; columns: number }) {
