@@ -99,6 +99,7 @@ export function CustomerAccountsPage() {
   const to = searchParams.get("to") ?? localDate(new Date());
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [pickups, setPickups] = useState<PickupAdmin[]>([]);
+  const [cities, setCities] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
@@ -106,19 +107,15 @@ export function CustomerAccountsPage() {
   useEffect(() => {
     setLoading(true);
     setError(null);
-    Promise.all([adminApi.listCustomers(), adminApi.listPickups({ from, to })])
-      .then(([customerRows, pickupRows]) => {
+    Promise.all([adminApi.listCustomers(), adminApi.listPickups({ from, to }), adminApi.listCities()])
+      .then(([customerRows, pickupRows, cityRows]) => {
         setCustomers(customerRows);
         setPickups(pickupRows);
+        setCities(cityRows.map((row) => row.name).sort((a, b) => a.localeCompare(b)));
       })
       .catch((err) => setError(apiErrorMessage(err, "Could not load customer accounts.")))
       .finally(() => setLoading(false));
   }, [from, to]);
-
-  const cities = useMemo(
-    () => [...new Set(customers.map((customer) => customer.villageArea?.trim() || "Unspecified"))].sort(),
-    [customers],
-  );
 
   const rows = useMemo(() => {
     const amountByCustomer = new Map<string, number>();

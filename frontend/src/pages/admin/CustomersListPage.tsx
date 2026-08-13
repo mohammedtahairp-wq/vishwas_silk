@@ -39,13 +39,10 @@ export function CustomersListPage() {
 
   const [editing, setEditing] = useState<Customer | null>(null);
 
-  const cityOptions = useMemo(() => {
-    const names = new Set<string>(cities.map((city) => city.name));
-    for (const customer of customers) {
-      names.add(customer.villageArea?.trim() || "Unspecified");
-    }
-    return [...names].sort((a, b) => a.localeCompare(b));
-  }, [cities, customers]);
+  const cityOptions = useMemo(
+    () => [...cities.map((city) => city.name)].sort((a, b) => a.localeCompare(b)),
+    [cities],
+  );
 
   async function load() {
     setLoading(true);
