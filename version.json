@@ -1,6 +1,6 @@
 {
-  "versionName": "1.6.8",
-  "versionCode": 15,
+  "versionName": "1.6.9",
+  "versionCode": 16,
   "downloadUrl": "https://vishwassilk.com/vishwassilk.apk",
-  "releaseNotes": "Admin can now create or reset customer login credentials from the edit customer section."
+  "releaseNotes": "My Pickups and per-customer account history now show product-wise tables with rates, amounts, and grand totals."
 }
