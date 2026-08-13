@@ -127,48 +127,7 @@ export function CustomerProductHistoryPage() {
         <Stat label="Total amount" value={money(totals.amount)} />
       </div>
 
-      <div className="space-y-3 md:hidden">
-        {loading ? (
-          <div className="rounded-xl border border-gray-200 bg-white p-6 text-center text-sm text-gray-400 shadow-sm">
-            Loading product history...
-          </div>
-        ) : dateRows.length === 0 ? (
-          <div className="rounded-xl border border-gray-200 bg-white p-6 text-center text-sm text-gray-400 shadow-sm">
-            No product history found for this date range.
-          </div>
-        ) : dateRows.map((row) => (
-          <article key={row.date} className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
-            <div className="flex items-center justify-between gap-3 bg-emerald-700 px-4 py-3 text-white">
-              <h2 className="font-semibold">{new Date(`${row.date}T00:00:00`).toLocaleDateString("en-IN")}</h2>
-              <span className="text-sm font-semibold">{money(row.amount)}</span>
-            </div>
-            <div className="divide-y divide-gray-100">
-              {activeProducts.map((product) => {
-                const value = row.byProduct.get(product.id);
-                if (!value) return null;
-                return (
-                  <div key={product.id} className="grid grid-cols-[1fr_auto] gap-x-4 gap-y-1 px-4 py-3">
-                    <p className="font-medium text-gray-900">{product.name}</p>
-                    <p className="text-right text-sm font-semibold text-gray-900">{number(value.kg)} kg</p>
-                  </div>
-                );
-              })}
-            </div>
-            <div className="grid grid-cols-2 gap-3 bg-emerald-50 px-4 py-3 text-sm">
-              <div>
-                <p className="text-xs uppercase tracking-wide text-emerald-500">Total quantity</p>
-                <p className="mt-0.5 font-semibold text-emerald-900">{number(row.kg)} kg</p>
-              </div>
-              <div className="text-right">
-                <p className="text-xs uppercase tracking-wide text-emerald-500">Total amount</p>
-                <p className="mt-0.5 font-semibold text-emerald-900">{money(row.amount)}</p>
-              </div>
-            </div>
-          </article>
-        ))}
-      </div>
-
-      <div className="hidden overflow-x-auto rounded-xl border border-gray-200 bg-white shadow-sm md:block">
+      <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white shadow-sm">
         <table className="min-w-max text-sm">
           <thead className="text-white">
             <tr className="bg-emerald-700">
