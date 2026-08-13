@@ -200,7 +200,7 @@ export function CustomerProductHistoryPage() {
               </tr>
               <tr className="border-t-2 border-emerald-600 bg-emerald-100 font-semibold text-gray-900">
                 <td colSpan={columnCount} className="sticky left-0 bg-emerald-100 px-4 py-3">GRAND TOTAL</td>
-                <td className="bg-emerald-100 px-3 py-3 text-right">{money(totals.amount)}</td>
+                <td className="bg-emerald-100 px-3 py-3 text-center">{money(totals.amount)}</td>
               </tr>
             </tfoot>
           )}
