@@ -9,7 +9,6 @@ import { inrCurrency } from "./dashboard/format";
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const UNSPECIFIED = "Unspecified";
 
-const cityOf = (c: Customer) => c.villageArea?.trim() || UNSPECIFIED;
 const dateInputValue = (date: Date) => {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");
@@ -69,16 +68,21 @@ export function DashboardHome() {
   }
 
   const { cityByCustomer, cities } = useMemo(() => {
+    const managed = new Set(cityFilterOptions);
+    const resolve = (c: Customer) => {
+      const raw = c.villageArea?.trim();
+      return raw && managed.has(raw) ? raw : UNSPECIFIED;
+    };
     const map = new Map<string, string>();
     const set = new Set<string>();
     for (const c of customers) {
-      const ct = cityOf(c);
+      const ct = resolve(c);
       map.set(c.id, ct);
       set.add(ct);
     }
     const list = [...set].sort((a, b) => (a === UNSPECIFIED ? 1 : b === UNSPECIFIED ? -1 : a.localeCompare(b)));
     return { cityByCustomer: map, cities: list };
-  }, [customers]);
+  }, [customers, cityFilterOptions]);
 
   const stats = useMemo(() => {
     const inCity = (custId: string | undefined) => !city || (custId != null && cityByCustomer.get(custId) === city);
@@ -138,7 +142,10 @@ export function DashboardHome() {
       cityRevenue.set(ct, 0);
       cityCustomers.set(ct, 0);
     }
-    for (const c of customers) cityCustomers.set(cityOf(c), (cityCustomers.get(cityOf(c)) ?? 0) + 1);
+    for (const c of customers) {
+      const ct = cityByCustomer.get(c.id) ?? UNSPECIFIED;
+      cityCustomers.set(ct, (cityCustomers.get(ct) ?? 0) + 1);
+    }
     for (const p of pickups.filter((pickup) => inDateRange(pickup.pickupDate))) {
       const ct = cityByCustomer.get(p.customerId) ?? UNSPECIFIED;
       cityRevenue.set(ct, (cityRevenue.get(ct) ?? 0) + Number(p.amount || 0));
