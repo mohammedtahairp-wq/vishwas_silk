@@ -52,16 +52,18 @@ export function GrandTotalPage() {
   const [customerId, setCustomerId] = useState("");
   const [riderId, setRiderId] = useState("");
   const [city, setCity] = useState("");
+  const [cities, setCities] = useState<string[]>([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    Promise.all([adminApi.listProducts(), adminApi.listCustomers(), adminApi.listRiders()])
-      .then(([productRows, customerRows, riderRows]) => {
+    Promise.all([adminApi.listProducts(), adminApi.listCustomers(), adminApi.listRiders(), adminApi.listCities()])
+      .then(([productRows, customerRows, riderRows, cityRows]) => {
         setProducts(productRows);
         setCustomers(customerRows);
         setRiders(riderRows);
+        setCities(cityRows.map((row) => row.name).sort((a, b) => a.localeCompare(b)));
       })
       .catch((err) => setError(apiErrorMessage(err, "Could not load report filters.")));
   }, []);
@@ -79,11 +81,6 @@ export function GrandTotalPage() {
       .finally(() => current && setLoading(false));
     return () => { current = false; };
   }, [from, to]);
-
-  const cities = useMemo(
-    () => [...new Set(customers.map((customer) => customer.villageArea).filter((value): value is string => Boolean(value)))].sort(),
-    [customers]
-  );
 
   const filtered = useMemo(() => {
     const query = search.trim().toLowerCase();

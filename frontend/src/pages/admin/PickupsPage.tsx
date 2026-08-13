@@ -73,13 +73,10 @@ export function PickupsPage() {
 
   const range = useMemo(() => reportRange(period, selectedDate), [period, selectedDate]);
 
-  const cityOptions = useMemo(() => {
-    const names = new Set<string>(cities.map((city) => city.name));
-    for (const pickup of pickups) {
-      if (pickup.customer?.villageArea?.trim()) names.add(pickup.customer.villageArea.trim());
-    }
-    return [...names].sort((a, b) => a.localeCompare(b));
-  }, [cities, pickups]);
+  const cityOptions = useMemo(
+    () => [...cities.map((city) => city.name)].sort((a, b) => a.localeCompare(b)),
+    [cities],
+  );
 
   const fetchCommon = () => Promise.all([adminApi.listCities(), adminApi.listProducts()]).then(([cityRows, productRows]) => {
     setCities(cityRows);
