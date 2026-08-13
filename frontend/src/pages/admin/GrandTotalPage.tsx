@@ -171,7 +171,7 @@ export function GrandTotalPage() {
           <thead>
             <tr className="bg-slate-800 text-white">
               <th rowSpan={2} className="border-r border-slate-600 px-3 py-2 text-right">Amount</th>
-              <th rowSpan={2} className="border-r border-slate-600 px-3 py-2 text-left">Date</th>
+              <th rowSpan={2} className="sticky left-0 z-10 border-r border-slate-600 bg-slate-800 px-3 py-2 text-left">Date</th>
               {visibleProducts.map((product) => <th key={product.id} colSpan={3} className="border-r border-slate-600 px-3 py-2 text-center">{product.name}</th>)}
             </tr>
             <tr className="bg-slate-700 text-xs text-white">
@@ -184,13 +184,13 @@ export function GrandTotalPage() {
               : rows.map((row) => (
                 <tr key={row.date} className="border-t border-gray-200 hover:bg-emerald-50/40">
                   <td className="border-r border-gray-200 bg-slate-50 px-3 py-2 text-right font-semibold">{money(row.amount)}</td>
-                  <td className="border-r border-gray-200 px-3 py-2 font-medium">{displayDate(row.date)}</td>
+                  <td className="sticky left-0 border-r border-gray-200 bg-inherit px-3 py-2 font-medium">{displayDate(row.date)}</td>
                   {visibleProducts.map((product) => <ProductCells key={product.id} value={row.products[product.id]} />)}
                 </tr>
               ))}
           </tbody>
           {!loading && rows.length > 0 && <tfoot><tr className="border-t-2 border-slate-700 bg-slate-800 font-semibold text-white">
-            <td className="border-r border-slate-600 px-3 py-3 text-right">{money(totals.amount)}</td><td className="border-r border-slate-600 px-3 py-3">GRAND TOTAL</td>
+            <td className="border-r border-slate-600 px-3 py-3 text-right">{money(totals.amount)}</td>            <td className="sticky left-0 border-r border-slate-600 bg-slate-800 px-3 py-3">GRAND TOTAL</td>
             {visibleProducts.map((product) => <ProductCells key={product.id} value={totals.products[product.id]} footer />)}
           </tr></tfoot>}
         </table>

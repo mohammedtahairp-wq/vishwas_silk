@@ -139,7 +139,7 @@ export function CustomerProductHistoryPage() {
                   {product.name}
                 </th>
               ))}
-              <th colSpan={2} className="sticky right-0 z-20 min-w-48 border-l border-emerald-500 bg-emerald-700 px-3 py-3 text-center text-base font-semibold">
+              <th colSpan={2} className="min-w-48 border-l border-emerald-500 bg-emerald-700 px-3 py-3 text-center text-base font-semibold">
                 Total
               </th>
             </tr>
@@ -149,8 +149,8 @@ export function CustomerProductHistoryPage() {
                   <th className="min-w-20 border-r border-emerald-400 px-3 py-2 text-center">Kg</th>
                 </Fragment>
               ))}
-              <th className="sticky right-28 z-20 min-w-20 border-l border-emerald-400 bg-emerald-600 px-3 py-2 text-center">Kg</th>
-              <th className="sticky right-0 z-20 min-w-28 bg-emerald-600 px-3 py-2 text-right">Amount</th>
+              <th className="min-w-20 border-l border-emerald-400 bg-emerald-600 px-3 py-2 text-center">Kg</th>
+              <th className="min-w-28 bg-emerald-600 px-3 py-2 text-right">Amount</th>
             </tr>
           </thead>
           <tbody>
@@ -171,8 +171,8 @@ export function CustomerProductHistoryPage() {
                     </Fragment>
                   );
                 })}
-                <td className="sticky right-28 border-l border-emerald-100 bg-emerald-50 px-3 py-3 text-center font-semibold">{number(row.kg)}</td>
-                <td className="sticky right-0 bg-emerald-50 px-3 py-3 text-right font-semibold">{money(row.amount)}</td>
+                <td className="border-l border-emerald-100 bg-emerald-50 px-3 py-3 text-center font-semibold">{number(row.kg)}</td>
+                <td className="bg-emerald-50 px-3 py-3 text-right font-semibold">{money(row.amount)}</td>
               </tr>
             ))}
           </tbody>
@@ -188,8 +188,8 @@ export function CustomerProductHistoryPage() {
                     </Fragment>
                   );
                 })}
-                <td className="sticky right-28 border-l border-emerald-200 bg-emerald-100 px-3 py-3 text-center">{number(totals.kg)}</td>
-                <td className="sticky right-0 bg-emerald-100 px-3 py-3 text-right">{money(totals.amount)}</td>
+                <td className="border-l border-emerald-200 bg-emerald-100 px-3 py-3 text-center">{number(totals.kg)}</td>
+                <td className="bg-emerald-100 px-3 py-3 text-right">{money(totals.amount)}</td>
               </tr>
             </tfoot>
           )}

@@ -207,7 +207,7 @@ export function PickupsPage() {
             <table className="min-w-full whitespace-nowrap text-sm">
               <thead className="bg-emerald-700 text-left text-white">
                 <tr>
-                  <th rowSpan={2} className="border-r border-emerald-500 px-3 py-2">Customer</th>
+                  <th rowSpan={2} className="sticky left-0 z-10 border-r border-emerald-500 bg-emerald-700 px-3 py-2">Customer</th>
                   {visibleProducts.map((product) => (
                     <th key={product.id} colSpan={1} className="border-r border-emerald-500 px-3 py-2 text-center">{product.name}</th>
                   ))}
@@ -228,7 +228,7 @@ export function PickupsPage() {
                   <tr><td colSpan={3 + visibleProducts.length} className="px-4 py-8 text-center text-gray-400">No pickups found for this city and period.</td></tr>
                 ) : reportRows.map((row) => (
                   <tr key={row.customerId} className="border-t border-gray-100 hover:bg-gray-50">
-                    <td className="border-r border-gray-200 px-3 py-2 font-medium text-gray-900">{row.customerName}</td>
+                    <td className="sticky left-0 border-r border-gray-200 bg-inherit px-3 py-2 font-medium text-gray-900">{row.customerName}</td>
                     {visibleProducts.map((product) => (
                       <ProductColumns key={product.id} kg={row.values[product.id]?.kg ?? 0} />
                     ))}
