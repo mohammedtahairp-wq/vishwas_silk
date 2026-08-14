@@ -352,6 +352,7 @@ export function CustomersListPage() {
 }
 
 function EditCustomerModal({ customer, cities, products, onClose, onSaved }: { customer: Customer; cities: City[]; products: Product[]; onClose: () => void; onSaved: () => void }) {
+  const [serialNumber, setSerialNumber] = useState(customer.serialNumber ?? "");
   const [name, setName] = useState(customer.name);
   const [phone, setPhone] = useState(customer.phone);
   const [address, setAddress] = useState(customer.address);
@@ -382,6 +383,7 @@ function EditCustomerModal({ customer, cities, products, onClose, onSaved }: { c
     try {
       const validProducts = productPrices.filter((p) => p.productId && p.pricePerKg);
       await adminApi.updateCustomer(customer.id, {
+        serialNumber: serialNumber || null,
         name,
         phone,
         address,
@@ -407,11 +409,14 @@ function EditCustomerModal({ customer, cities, products, onClose, onSaved }: { c
   return (
     <Modal title="Edit customer" onClose={onClose}>
       <form onSubmit={save} className="space-y-3">
-        {customer.serialNumber && (
-          <div className="rounded bg-emerald-50 px-3 py-2 text-sm font-mono font-semibold text-emerald-700">
-            {customer.serialNumber}
-          </div>
-        )}
+        <Field label="Serial No.">
+          <input
+            className="w-full border border-gray-300 rounded px-2 py-1.5 font-mono"
+            placeholder="e.g. KANCHIPURAM01"
+            value={serialNumber}
+            onChange={(e) => setSerialNumber(e.target.value)}
+          />
+        </Field>
         <Field label="Name">
           <input className="w-full border border-gray-300 rounded px-2 py-1.5" value={name} onChange={(e) => setName(e.target.value)} required />
         </Field>

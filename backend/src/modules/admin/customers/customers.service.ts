@@ -24,6 +24,7 @@ interface UpdateCustomerInput {
   phone?: string;
   address?: string;
   villageArea?: string;
+  serialNumber?: string | null;
   products?: ProductPriceInput[];
   createdById?: string;
 }
@@ -143,6 +144,13 @@ async function customerLoginSet(customerIds: string[]): Promise<Set<string>> {
 export async function updateCustomer(id: string, input: UpdateCustomerInput) {
   await getCustomerById(id);
   const { products, ...fields } = input;
+
+  if (input.serialNumber) {
+    const withSameSerial = await prisma.customer.findUnique({ where: { serialNumber: input.serialNumber } });
+    if (withSameSerial && withSameSerial.id !== id) {
+      throw new ConflictError("That serial number is already in use by another customer");
+    }
+  }
 
   const customer = await prisma.customer.update({ where: { id }, data: fields });
 

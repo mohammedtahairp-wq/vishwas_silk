@@ -18,7 +18,16 @@ const createSchema = z.object({
   products: z.array(productPriceSchema).optional(),
 });
 
-const updateSchema = createSchema.partial();
+const serialNumberField = z.union([z.string().trim().max(50), z.null()]).optional();
+
+const updateSchema = z.object({
+  name: z.string().min(1).optional(),
+  phone: z.string().min(6).optional(),
+  address: z.string().optional(),
+  villageArea: z.string().optional(),
+  serialNumber: serialNumberField,
+  products: z.array(productPriceSchema).optional(),
+});
 
 const loginSchema = z
   .object({
