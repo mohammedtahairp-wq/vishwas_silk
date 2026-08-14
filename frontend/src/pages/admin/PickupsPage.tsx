@@ -66,6 +66,7 @@ export function PickupsPage() {
   const [city, setCity] = useState("");
   const [period, setPeriod] = useState<Period>("daily");
   const [selectedDate, setSelectedDate] = useState(localDateValue());
+  const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [editingPickup, setEditingPickup] = useState<PickupAdmin | null>(null);
@@ -101,6 +102,12 @@ export function PickupsPage() {
     const rows = new Map<string, ReportRow>();
     for (const pickup of pickups) {
       if (city && pickup.customer?.villageArea?.trim()?.toLowerCase() !== city.toLowerCase()) continue;
+      if (search.trim()) {
+        const q = search.trim().toLowerCase();
+        const haystack = [pickup.customer?.name, pickup.customer?.serialNumber, pickup.customer?.phone]
+          .filter(Boolean).join(" ").toLowerCase();
+        if (!haystack.includes(q)) continue;
+      }
       const row = rows.get(pickup.customerId) ?? {
         customerId: pickup.customerId,
         customerName: pickup.customer?.name ?? "Unknown customer",
@@ -119,7 +126,18 @@ export function PickupsPage() {
       rows.set(pickup.customerId, row);
     }
     return [...rows.values()].sort((a, b) => a.customerName.localeCompare(b.customerName));
-  }, [pickups, city]);
+  }, [pickups, city, search]);
+
+  const filteredListPickups = useMemo(() => pickups.filter((pickup) => {
+    if (city && pickup.customer?.villageArea?.trim()?.toLowerCase() !== city.toLowerCase()) return false;
+    if (search.trim()) {
+      const q = search.trim().toLowerCase();
+      const haystack = [pickup.customer?.name, pickup.customer?.serialNumber, pickup.customer?.phone, pickup.rider?.name, pickup.product?.name]
+        .filter(Boolean).join(" ").toLowerCase();
+      if (!haystack.includes(q)) return false;
+    }
+    return true;
+  }), [pickups, city, search]);
 
   const visibleProducts = useMemo(
     () => products.filter((product) => reportRows.some((row) => row.values[product.id])),
@@ -167,16 +185,23 @@ export function PickupsPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-3 rounded-lg border border-gray-200 bg-white p-4 shadow-sm sm:grid-cols-3">
-        {viewMode === "report" && (
-          <label className="text-xs font-medium text-gray-600">
-            City
-            <select className="mt-1 w-full rounded border border-gray-300 px-2 py-2 text-sm" value={city} onChange={(e) => setCity(e.target.value)}>
-              <option value="">All cities</option>
-              {cityOptions.map((name) => <option key={name} value={name}>{name}</option>)}
-            </select>
-          </label>
-        )}
+      <div className="grid grid-cols-1 gap-3 rounded-lg border border-gray-200 bg-white p-4 shadow-sm sm:grid-cols-4">
+        <label className="text-xs font-medium text-gray-600">
+          City
+          <select className="mt-1 w-full rounded border border-gray-300 px-2 py-2 text-sm" value={city} onChange={(e) => setCity(e.target.value)}>
+            <option value="">All cities</option>
+            {cityOptions.map((name) => <option key={name} value={name}>{name}</option>)}
+          </select>
+        </label>
+        <label className="text-xs font-medium text-gray-600">
+          Search
+          <input
+            className="mt-1 w-full rounded border border-gray-300 px-2 py-2 text-sm"
+            placeholder="Customer, serial, phone, rider, product..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </label>
         <label className="text-xs font-medium text-gray-600">
           Report period
           <select className="mt-1 w-full rounded border border-gray-300 px-2 py-2 text-sm" value={period} onChange={(e) => setPeriod(e.target.value as Period)}>
@@ -225,7 +250,7 @@ export function PickupsPage() {
                 {loading ? (
                   <tr><td colSpan={3 + visibleProducts.length} className="px-4 py-8 text-center text-gray-400">Loading report...</td></tr>
                 ) : reportRows.length === 0 ? (
-                  <tr><td colSpan={3 + visibleProducts.length} className="px-4 py-8 text-center text-gray-400">No pickups found for this city and period.</td></tr>
+                  <tr><td colSpan={3 + visibleProducts.length} className="px-4 py-8 text-center text-gray-400">No pickups found for this city, search and period.</td></tr>
                 ) : reportRows.map((row) => (
                   <tr key={row.customerId} className="border-t border-gray-100 hover:bg-gray-50">
                     <td className="sticky left-0 border-r border-gray-200 bg-inherit px-3 py-2 font-medium text-gray-900">{row.customerName}</td>
@@ -257,9 +282,9 @@ export function PickupsPage() {
             <tbody>
               {loading ? (
                 <tr><td colSpan={7} className="px-4 py-8 text-center text-gray-400">Loading pickups...</td></tr>
-              ) : pickups.length === 0 ? (
-                <tr><td colSpan={7} className="px-4 py-8 text-center text-gray-400">No pickups found for this period.</td></tr>
-              ) : pickups.map((pickup) => (
+              ) : filteredListPickups.length === 0 ? (
+                <tr><td colSpan={7} className="px-4 py-8 text-center text-gray-400">No pickups found for this period and filters.</td></tr>
+              ) : filteredListPickups.map((pickup) => (
                 <tr key={pickup.id} className="border-t border-gray-100 hover:bg-gray-50">
                   <td className="px-3 py-2">{new Date(pickup.pickupDate).toLocaleDateString("en-IN")}</td>
                   <td className="px-3 py-2 font-medium text-gray-900">{pickup.customer?.name ?? "—"}</td>
