@@ -4,6 +4,11 @@ import { adminApi } from "../../api/admin.api";
 import type { Customer, CustomerProduct, Rider } from "../../api/types";
 import { apiErrorMessage } from "../../api/client";
 
+function localDateValue(date = new Date()) {
+  const offset = date.getTimezoneOffset() * 60_000;
+  return new Date(date.getTime() - offset).toISOString().slice(0, 10);
+}
+
 export function AdminLogPickupPage() {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [riders, setRiders] = useState<Rider[]>([]);
@@ -18,6 +23,7 @@ export function AdminLogPickupPage() {
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [pickupDate, setPickupDate] = useState(localDateValue());
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -106,11 +112,12 @@ export function AdminLogPickupPage() {
     setMessage(null);
     setSubmitting(true);
     try {
-      await adminApi.createBatchPickups({ customer_id: selectedCustomer.id, rider_id: selectedRiderId, items });
+      await adminApi.createBatchPickups({ customer_id: selectedCustomer.id, rider_id: selectedRiderId, items, pickup_date: pickupDate });
       setMessage("Pickup logged successfully!");
       setKgValues({});
       setSelectedCustomer(null);
       setSearch("");
+      setPickupDate(localDateValue());
     } catch (err) {
       setError(apiErrorMessage(err, "Could not log pickup."));
     } finally {
@@ -129,6 +136,17 @@ export function AdminLogPickupPage() {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-5">
+        <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+          <label className="mb-1.5 block text-sm font-semibold text-gray-700">Pickup Date</label>
+          <input
+            type="date"
+            className="w-full rounded-lg border border-gray-300 px-4 py-3 text-base"
+            value={pickupDate}
+            onChange={(e) => setPickupDate(e.target.value)}
+            required
+          />
+        </div>
+
         <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
           <label className="mb-1.5 block text-sm font-semibold text-gray-700">Rider</label>
           <select
