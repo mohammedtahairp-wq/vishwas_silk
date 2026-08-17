@@ -97,7 +97,7 @@ export function DashboardHome() {
     const pendingPickups = fPickups.filter((p) => p.status === "pending");
     const pendingAmount = pendingPickups.reduce((sum, p) => sum + Number(p.amount || 0), 0);
 
-    const settledPickups = fPickups.filter((p) => p.status !== "pending");
+    const settledPickups = fPickups.filter((p) => p.status === "paid");
     const settledAmount = settledPickups.reduce((sum, p) => sum + Number(p.amount || 0), 0);
 
     const pendingList = [...pendingPickups].sort((a, b) => b.pickupDate.localeCompare(a.pickupDate));
