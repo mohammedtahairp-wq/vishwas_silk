@@ -47,8 +47,10 @@ export function SettlementsPage() {
 
   const filteredCustomers = useMemo(() => {
     if (!cityFilter) return customers;
-    return customers.filter((c) => c.cityId === cityFilter);
-  }, [customers, cityFilter]);
+    const city = cities.find((c) => c.id === cityFilter);
+    if (!city) return [];
+    return customers.filter((c) => c.villageArea === city.name);
+  }, [customers, cityFilter, cities]);
 
   async function loadSummary() {
     setLoading(true);

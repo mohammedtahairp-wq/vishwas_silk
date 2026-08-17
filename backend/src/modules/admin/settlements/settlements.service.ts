@@ -201,10 +201,16 @@ export async function getSettlementsSummary(filters?: {
   const toDateEnd = filters?.toDate ? new Date(filters.toDate + "T23:59:59.999Z") : undefined;
   const fromDate = filters?.fromDate ? new Date(filters.fromDate) : undefined;
 
+  let cityVillageArea: string | undefined;
+  if (filters?.cityId) {
+    const city = await prisma.city.findUnique({ where: { id: filters.cityId }, select: { name: true } });
+    if (city) cityVillageArea = city.name;
+  }
+
   const where: any = {};
   if (filters?.customerId) where.customerId = filters.customerId;
   if (filters?.productId) where.productId = filters.productId;
-  if (filters?.cityId) where.customer = { is: { cityId: filters.cityId } };
+  if (cityVillageArea) where.customer = { is: { villageArea: cityVillageArea } };
   if (fromDate || toDateEnd) {
     where.pickupDate = {};
     if (fromDate) where.pickupDate.gte = fromDate;
