@@ -100,7 +100,7 @@ export function SettlementsPage() {
     }
   }
 
-  const totals = useMemo(() => {
+  const totals = useMemo((): { count: number; totalKg: number; totalAmount: number; pendingAmount: number; paidAmount: number } => {
     if (tab === "pending") {
       return summary.reduce(
         (acc, s) => ({
@@ -118,6 +118,8 @@ export function SettlementsPage() {
         count: acc.count + s.totalPickups,
         totalKg: acc.totalKg + s.totalKg,
         totalAmount: acc.totalAmount + s.totalAmount,
+        pendingAmount: 0,
+        paidAmount: 0,
       }),
       { count: 0, totalKg: 0, totalAmount: 0, pendingAmount: 0, paidAmount: 0 }
     );
