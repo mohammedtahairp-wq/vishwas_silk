@@ -91,13 +91,15 @@ export function DashboardHome() {
     const fCustomers = customers.filter((c) => inCity(c.id));
     const fPickups = pickups.filter((p) => inCity(p.customerId) && inDateRange(p.pickupDate));
 
-    const revenue = fPickups.reduce((sum, p) => sum + Number(p.amount || 0), 0);
-    const kg = fPickups.reduce((sum, p) => sum + Number(p.kg || 0), 0);
+    const activePickups = fPickups.filter((p) => p.status === "pending" || p.status === "paid");
 
-    const pendingPickups = fPickups.filter((p) => p.status === "pending");
+    const revenue = activePickups.reduce((sum, p) => sum + Number(p.amount || 0), 0);
+    const kg = activePickups.reduce((sum, p) => sum + Number(p.kg || 0), 0);
+
+    const pendingPickups = activePickups.filter((p) => p.status === "pending");
     const pendingAmount = pendingPickups.reduce((sum, p) => sum + Number(p.amount || 0), 0);
 
-    const settledPickups = fPickups.filter((p) => p.status === "paid");
+    const settledPickups = activePickups.filter((p) => p.status === "paid");
     const settledAmount = settledPickups.reduce((sum, p) => sum + Number(p.amount || 0), 0);
 
     const pendingList = [...pendingPickups].sort((a, b) => b.pickupDate.localeCompare(a.pickupDate));
@@ -111,7 +113,7 @@ export function DashboardHome() {
       buckets.push({ key: `${d.getFullYear()}-${d.getMonth()}`, label: MONTHS[d.getMonth()], value: 0 });
     }
     const byKey = new Map(buckets.map((b) => [b.key, b]));
-    for (const p of fPickups) {
+    for (const p of activePickups) {
       const d = new Date(p.pickupDate);
       const bucket = byKey.get(`${d.getFullYear()}-${d.getMonth()}`);
       if (bucket) bucket.value += Number(p.amount || 0);
@@ -141,7 +143,7 @@ export function DashboardHome() {
       const ct = cityByCustomer.get(c.id) ?? UNSPECIFIED;
       cityCustomers.set(ct, (cityCustomers.get(ct) ?? 0) + 1);
     }
-    for (const p of pickups.filter((pickup) => inDateRange(pickup.pickupDate))) {
+    for (const p of activePickups) {
       const ct = cityByCustomer.get(p.customerId) ?? UNSPECIFIED;
       cityRevenue.set(ct, (cityRevenue.get(ct) ?? 0) + Number(p.amount || 0));
     }
