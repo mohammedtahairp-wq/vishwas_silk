@@ -1,5 +1,5 @@
 import { apiClient } from "./client";
-import type { City, CreateCustomerResult, CreateRiderResult, Customer, PickupAdmin, Price, Product, Rider, Transaction } from "./types";
+import type { City, CreateCustomerResult, CreateRiderResult, Customer, PickupAdmin, Price, Product, Rider, SettlementPreview, Transaction } from "./types";
 
 export const adminApi = {
   // Cities
@@ -53,8 +53,11 @@ export const adminApi = {
     apiClient.put<PickupAdmin>(`/admin/pickups/${id}`, data).then((r) => r.data),
   deletePickup: (id: string) => apiClient.delete(`/admin/pickups/${id}`).then((r) => r.data),
 
-  listSettlements: () => apiClient.get<Transaction[]>("/admin/settlements").then((r) => r.data),
-  generateSettlement: (data: { customer_id: string; month: number; year: number }) =>
+  listSettlements: (params?: { status?: string; customer_id?: string; from_date?: string; to_date?: string; product_id?: string }) =>
+    apiClient.get<Transaction[]>("/admin/settlements", { params }).then((r) => r.data),
+  previewSettlement: (data: { customer_id: string; from_date: string; to_date: string }) =>
+    apiClient.post<SettlementPreview>("/admin/settlements/preview", data).then((r) => r.data),
+  generateSettlement: (data: { customer_id: string; from_date: string; to_date: string }) =>
     apiClient.post<Transaction>("/admin/settlements/generate", data).then((r) => r.data),
   markSettlementPaid: (id: string, paidDate: string) =>
     apiClient.put<Transaction>(`/admin/settlements/${id}/mark-paid`, { paid_date: paidDate }).then((r) => r.data),

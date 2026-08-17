@@ -105,10 +105,29 @@ export interface Transaction {
   customerId: string;
   month: number;
   year: number;
+  fromDate: string | null;
+  toDate: string | null;
   totalKg: string;
   totalAmount: string;
   status: "pending" | "paid";
   paidDate: string | null;
   customer?: Customer;
   lineItems?: TransactionLineItem[];
+}
+
+export interface SettlementPreview {
+  customerId: string;
+  fromDate: string;
+  toDate: string;
+  pickupsCount: number;
+  totalKg: number;
+  totalAmount: number;
+  lineItems: {
+    productId: string;
+    productName: string;
+    totalKg: number;
+    pricePerKg: number;
+    amount: number;
+    count: number;
+  }[];
 }

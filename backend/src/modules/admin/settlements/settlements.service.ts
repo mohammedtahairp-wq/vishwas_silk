@@ -2,21 +2,86 @@ import { prisma } from "../../../lib/prisma";
 import { BadRequestError, ConflictError, NotFoundError } from "../../../lib/errors";
 import { Prisma } from "@prisma/client";
 
-export async function generateSettlement(customerId: string, month: number, year: number, adminUserId: string) {
-  const from = new Date(Date.UTC(year, month - 1, 1));
-  const to = new Date(Date.UTC(year, month, 1));
+export async function previewSettlement(customerId: string, fromDate: Date, toDate: Date) {
+  if (fromDate >= toDate) {
+    throw new BadRequestError("From date must be before to date");
+  }
 
   const pickups = await prisma.pickup.findMany({
     where: {
       customerId,
       status: "pending",
-      pickupDate: { gte: from, lt: to },
+      pickupDate: { gte: fromDate, lt: toDate },
+    },
+    include: { product: true, rider: true },
+    orderBy: { pickupDate: "asc" },
+  });
+
+  if (pickups.length === 0) {
+    throw new BadRequestError("No unsettled pickups found for this customer in the selected date range");
+  }
+
+  const byProduct = new Map<string, { productName: string; totalKg: number; totalAmount: number; count: number }>();
+  for (const pickup of pickups) {
+    const entry = byProduct.get(pickup.productId) ?? { productName: pickup.product?.name ?? "Unknown", totalKg: 0, totalAmount: 0, count: 0 };
+    entry.totalKg += Number(pickup.kg);
+    entry.totalAmount += Number(pickup.amount);
+    entry.count += 1;
+    byProduct.set(pickup.productId, entry);
+  }
+
+  const totalKg = Number(pickups.reduce((sum, p) => sum + Number(p.kg), 0).toFixed(2));
+  const totalAmount = Number(pickups.reduce((sum, p) => sum + Number(p.amount), 0).toFixed(2));
+
+  const actualFrom = pickups[0].pickupDate;
+  const actualTo = pickups[pickups.length - 1].pickupDate;
+
+  return {
+    customerId,
+    fromDate: actualFrom,
+    toDate: actualTo,
+    pickupsCount: pickups.length,
+    totalKg,
+    totalAmount,
+    lineItems: Array.from(byProduct.entries()).map(([productId, data]) => ({
+      productId,
+      productName: data.productName,
+      totalKg: Number(data.totalKg.toFixed(2)),
+      pricePerKg: data.totalKg > 0 ? Number((data.totalAmount / data.totalKg).toFixed(2)) : 0,
+      amount: Number(data.totalAmount.toFixed(2)),
+      count: data.count,
+    })),
+  };
+}
+
+export async function generateSettlement(
+  customerId: string,
+  fromDate: Date,
+  toDate: Date,
+  adminUserId: string
+) {
+  if (fromDate >= toDate) {
+    throw new BadRequestError("From date must be before to date");
+  }
+
+  const pickups = await prisma.pickup.findMany({
+    where: {
+      customerId,
+      status: "pending",
+      pickupDate: { gte: fromDate, lt: toDate },
     },
   });
 
   if (pickups.length === 0) {
-    throw new BadRequestError("No unsettled pickups found for this customer in that month/year");
+    throw new BadRequestError("No unsettled pickups found for this customer in the selected date range");
   }
+
+  const actualFrom = pickups.reduce((min, p) => p.pickupDate < min ? p.pickupDate : min, pickups[0].pickupDate);
+  const actualTo = new Date(pickups.reduce((max, p) => p.pickupDate > max ? p.pickupDate : max, pickups[0].pickupDate));
+  actualTo.setDate(actualTo.getDate() + 1);
+
+  const month = actualFrom.getMonth() + 1;
+  const year = actualFrom.getFullYear();
 
   const byProduct = new Map<string, { totalKg: number; totalAmount: number }>();
   for (const pickup of pickups) {
@@ -36,6 +101,8 @@ export async function generateSettlement(customerId: string, month: number, year
           customerId,
           month,
           year,
+          fromDate: actualFrom,
+          toDate: actualTo,
           totalKg,
           totalAmount,
           createdById: adminUserId,
@@ -43,14 +110,12 @@ export async function generateSettlement(customerId: string, month: number, year
             create: Array.from(byProduct.entries()).map(([productId, { totalKg: kg, totalAmount: amt }]) => ({
               productId,
               totalKg: Number(kg.toFixed(2)),
-              // Weighted-average price so the line item stays internally
-              // consistent even if price changed mid-month.
               pricePerKg: Number((amt / kg).toFixed(2)),
               amount: Number(amt.toFixed(2)),
             })),
           },
         },
-        include: { lineItems: true },
+        include: { lineItems: { include: { product: true } }, customer: true },
       });
 
       await tx.pickup.updateMany({
@@ -68,8 +133,48 @@ export async function generateSettlement(customerId: string, month: number, year
   }
 }
 
-export function listSettlements() {
+export function listSettlements(filters?: {
+  status?: string;
+  customerId?: string;
+  fromDate?: string;
+  toDate?: string;
+  productId?: string;
+}) {
+  const where: Prisma.TransactionWhereInput = {};
+
+  if (filters?.status) {
+    where.status = filters.status as "pending" | "paid";
+  }
+  if (filters?.customerId) {
+    where.customerId = filters.customerId;
+  }
+  if (filters?.fromDate || filters?.toDate) {
+    where.AND = [];
+    if (filters.fromDate) {
+      (where.AND as Prisma.TransactionWhereInput[]).push({
+        OR: [
+          { fromDate: { gte: new Date(filters.fromDate) } },
+          { AND: [{ fromDate: null }, { createdAt: { gte: new Date(filters.fromDate) } }] },
+        ],
+      });
+    }
+    if (filters.toDate) {
+      const toDate = new Date(filters.toDate);
+      toDate.setDate(toDate.getDate() + 1);
+      (where.AND as Prisma.TransactionWhereInput[]).push({
+        OR: [
+          { toDate: { lt: toDate } },
+          { AND: [{ toDate: null }, { createdAt: { lt: toDate } }] },
+        ],
+      });
+    }
+  }
+  if (filters?.productId) {
+    where.lineItems = { some: { productId: filters.productId } };
+  }
+
   return prisma.transaction.findMany({
+    where,
     include: { customer: true, lineItems: { include: { product: true } } },
     orderBy: [{ year: "desc" }, { month: "desc" }],
   });

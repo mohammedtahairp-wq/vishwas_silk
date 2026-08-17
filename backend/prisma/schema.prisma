@@ -149,6 +149,8 @@ model Transaction {
   customerId  String            @map("customer_id")
   month       Int
   year        Int
+  fromDate    DateTime?         @map("from_date") @db.Date
+  toDate      DateTime?         @map("to_date") @db.Date
   totalKg     Decimal           @map("total_kg") @db.Decimal(10, 2)
   totalAmount Decimal           @map("total_amount") @db.Decimal(12, 2)
   status      TransactionStatus @default(pending)
