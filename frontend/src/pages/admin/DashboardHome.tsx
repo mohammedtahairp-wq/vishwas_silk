@@ -54,16 +54,6 @@ export function DashboardHome() {
       .finally(() => setLoading(false));
   }, [fromDate, toDate]);
 
-  async function handleMarkPaid(id: string) {
-    try {
-      const paidDate = new Date().toISOString().slice(0, 10);
-      await adminApi.markPickupPaid(id, paidDate);
-      setPickups((prev) => prev.map((p) => (p.id === id ? { ...p, status: "paid" } : p)));
-    } catch {
-      /* ignore */
-    }
-  }
-
   const { cityByCustomer, cities } = useMemo(() => {
     const managed = new Set(cityFilterOptions);
     const resolve = (c: Customer) => {
@@ -101,8 +91,6 @@ export function DashboardHome() {
 
     const settledPickups = activePickups.filter((p) => p.status === "paid");
     const settledAmount = settledPickups.reduce((sum, p) => sum + Number(p.amount || 0), 0);
-
-    const pendingList = [...pendingPickups].sort((a, b) => b.pickupDate.localeCompare(a.pickupDate));
 
     const buckets: { key: string; label: string; value: number }[] = [];
     const now = new Date();
@@ -159,7 +147,6 @@ export function DashboardHome() {
       pendingCount: pendingPickups.length,
       settledAmount,
       settledCount: settledPickups.length,
-      pendingList,
       revenueByMonth: buckets,
       byProduct,
       topRiders,
@@ -279,48 +266,6 @@ export function DashboardHome() {
             />
           </div>
         </motion.div>
-
-        {stats.pendingList.length > 0 && (
-          <motion.div variants={item} className="mb-6">
-            <Card title="Pending settlements" subtitle={`${stats.pendingList.length} awaiting payment · ${scope}`}>
-              <div className="overflow-x-auto">
-                <table className="min-w-full text-sm">
-                  <thead className="bg-gray-50 text-gray-600 text-left">
-                    <tr>
-                      <th className="px-3 py-2">Customer</th>
-                      <th className="px-3 py-2">Date</th>
-                      <th className="px-3 py-2">Product</th>
-                      <th className="px-3 py-2 text-right">Kg</th>
-                      <th className="px-3 py-2 text-right">Amount</th>
-                      <th className="px-3 py-2"></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {stats.pendingList.slice(0, 10).map((p) => (
-                      <tr key={p.id} className="border-t border-gray-100">
-                        <td className="px-3 py-2 font-medium text-gray-900">{p.customer?.name ?? "—"}</td>
-                        <td className="px-3 py-2">{new Date(p.pickupDate).toLocaleDateString("en-IN")}</td>
-                        <td className="px-3 py-2">{p.product?.name ?? "—"}</td>
-                        <td className="px-3 py-2 text-right">{Number(p.kg).toFixed(2)}</td>
-                        <td className="px-3 py-2 text-right font-medium tabular-nums">{inrCurrency(Number(p.amount))}</td>
-                        <td className="px-3 py-2 text-right">
-                          <button onClick={() => handleMarkPaid(p.id)} className="text-emerald-600 hover:underline whitespace-nowrap">
-                            Mark paid
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              <div className="mt-3 text-right">
-                <button onClick={() => navigate("/admin/settlements")} className="text-sm text-emerald-600 hover:underline">
-                  View all settlements →
-                </button>
-              </div>
-            </Card>
-          </motion.div>
-        )}
 
         <motion.div variants={item} className="grid grid-cols-1 gap-5 lg:grid-cols-2 mb-6">
           <Card title="Revenue by city" subtitle={`Selected period · all cities`}>
