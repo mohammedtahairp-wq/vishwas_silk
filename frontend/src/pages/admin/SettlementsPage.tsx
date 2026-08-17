@@ -45,6 +45,11 @@ export function SettlementsPage() {
     loadSummary();
   }, [fromDate, toDate, customerFilter, productFilter, cityFilter]);
 
+  const filteredCustomers = useMemo(() => {
+    if (!cityFilter) return customers;
+    return customers.filter((c) => c.cityId === cityFilter);
+  }, [customers, cityFilter]);
+
   async function loadSummary() {
     setLoading(true);
     setError(null);
@@ -123,14 +128,14 @@ export function SettlementsPage() {
             <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Customer</label>
             <select className="border border-gray-300 rounded px-2 py-1.5 text-sm" value={customerFilter} onChange={(e) => setCustomerFilter(e.target.value)}>
               <option value="">All customers</option>
-              {customers.map((c) => (
+              {filteredCustomers.map((c) => (
                 <option key={c.id} value={c.id}>{c.name}</option>
               ))}
             </select>
           </div>
           <div>
             <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">City</label>
-            <select className="border border-gray-300 rounded px-2 py-1.5 text-sm" value={cityFilter} onChange={(e) => setCityFilter(e.target.value)}>
+            <select className="border border-gray-300 rounded px-2 py-1.5 text-sm" value={cityFilter} onChange={(e) => { setCityFilter(e.target.value); setCustomerFilter(""); }}>
               <option value="">All cities</option>
               {cities.map((c) => (
                 <option key={c.id} value={c.id}>{c.name}</option>

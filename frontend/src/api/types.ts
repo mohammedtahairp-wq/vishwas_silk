@@ -19,6 +19,7 @@ export interface Customer {
   phone: string;
   address: string;
   villageArea?: string | null;
+  cityId?: string | null;
   assignedRiderId?: string | null;
   assignedRider?: Rider | null;
   status: "active" | "inactive";
