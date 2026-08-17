@@ -19,6 +19,24 @@ function today() {
   return toLocalDate(new Date());
 }
 
+const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+
+function lastDayOfMonth(year: number, month: number) {
+  return toLocalDate(new Date(year, month, 0));
+}
+
+function getMonthOptions() {
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const options: { label: string; value: string }[] = [{ label: "All months", value: "" }];
+  for (let m = 0; m < 12; m++) {
+    const from = `${currentYear}-${String(m + 1).padStart(2, "0")}-01`;
+    const to = lastDayOfMonth(currentYear, m + 1);
+    options.push({ label: `${MONTHS[m]} ${currentYear}`, value: `${from}|${to}` });
+  }
+  return options;
+}
+
 type Tab = "pending" | "paid";
 
 export function SettlementsPage() {
@@ -34,9 +52,7 @@ export function SettlementsPage() {
 
   const [fromDate, setFromDate] = useState(monthStart);
   const [toDate, setToDate] = useState(today);
-  const [paidFromDate, setPaidFromDate] = useState("");
-  const [paidToDate, setPaidToDate] = useState("");
-  const [usePaidDateFilter, setUsePaidDateFilter] = useState(false);
+  const [paidMonth, setPaidMonth] = useState("");
   const [customerFilter, setCustomerFilter] = useState("");
   const [productFilter, setProductFilter] = useState("");
   const [cityFilter, setCityFilter] = useState("");
@@ -50,7 +66,7 @@ export function SettlementsPage() {
 
   useEffect(() => {
     loadData();
-  }, [fromDate, toDate, paidFromDate, paidToDate, usePaidDateFilter, customerFilter, productFilter, cityFilter, tab]);
+  }, [fromDate, toDate, paidMonth, customerFilter, productFilter, cityFilter, tab]);
 
   const filteredCustomers = useMemo(() => {
     if (!cityFilter) return customers;
@@ -66,9 +82,10 @@ export function SettlementsPage() {
     if (tab === "pending") {
       if (fromDate) params.from_date = fromDate;
       if (toDate) params.to_date = toDate;
-    } else if (usePaidDateFilter) {
-      if (paidFromDate) params.from_date = paidFromDate;
-      if (paidToDate) params.to_date = paidToDate;
+    } else if (paidMonth) {
+      const [pf, pt] = paidMonth.split("|");
+      params.from_date = pf;
+      params.to_date = pt;
     }
     if (customerFilter) params.customer_id = customerFilter;
     if (productFilter) params.product_id = productFilter;
@@ -135,14 +152,12 @@ export function SettlementsPage() {
 
   const hasFilters = tab === "pending"
     ? Boolean(customerFilter || productFilter || cityFilter || fromDate !== monthStart() || toDate !== today())
-    : Boolean(customerFilter || productFilter || cityFilter || usePaidDateFilter);
+    : Boolean(customerFilter || productFilter || cityFilter || paidMonth);
 
   function resetFilters() {
     setFromDate(monthStart());
     setToDate(today());
-    setPaidFromDate("");
-    setPaidToDate("");
-    setUsePaidDateFilter(false);
+    setPaidMonth("");
     setCustomerFilter("");
     setProductFilter("");
     setCityFilter("");
@@ -225,28 +240,14 @@ export function SettlementsPage() {
           </div>
         ) : (
           <div className="flex flex-wrap items-end gap-3">
-            <div className="flex items-center gap-2 pb-0.5">
-              <input
-                type="checkbox"
-                id="paidDateFilter"
-                checked={usePaidDateFilter}
-                onChange={(e) => setUsePaidDateFilter(e.target.checked)}
-                className="rounded border-gray-300 text-emerald-600"
-              />
-              <label htmlFor="paidDateFilter" className="text-sm text-gray-600">Filter by payment date</label>
+            <div>
+              <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Month</label>
+              <select className="border border-gray-300 rounded px-2 py-1.5 text-sm" value={paidMonth} onChange={(e) => setPaidMonth(e.target.value)}>
+                {getMonthOptions().map((o) => (
+                  <option key={o.value || "__all__"} value={o.value}>{o.label}</option>
+                ))}
+              </select>
             </div>
-            {usePaidDateFilter && (
-              <>
-                <div>
-                  <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Paid from</label>
-                  <input type="date" className="border border-gray-300 rounded px-2 py-1.5 text-sm" value={paidFromDate} onChange={(e) => setPaidFromDate(e.target.value)} />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Paid to</label>
-                  <input type="date" className="border border-gray-300 rounded px-2 py-1.5 text-sm" value={paidToDate} onChange={(e) => setPaidToDate(e.target.value)} />
-                </div>
-              </>
-            )}
             <div>
               <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">City</label>
               <select className="border border-gray-300 rounded px-2 py-1.5 text-sm" value={cityFilter} onChange={(e) => { setCityFilter(e.target.value); setCustomerFilter(""); }}>
