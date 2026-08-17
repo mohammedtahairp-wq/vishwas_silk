@@ -10,15 +10,6 @@ function toLocalDate(d: Date) {
   return `${y}-${m}-${day}`;
 }
 
-function monthStart() {
-  const d = new Date();
-  return toLocalDate(new Date(d.getFullYear(), d.getMonth(), 1));
-}
-
-function today() {
-  return toLocalDate(new Date());
-}
-
 const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
 function lastDayOfMonth(year: number, month: number) {
@@ -50,8 +41,12 @@ export function SettlementsPage() {
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
 
-  const [fromDate, setFromDate] = useState(monthStart);
-  const [toDate, setToDate] = useState(today);
+  const [monthFilter, setMonthFilter] = useState(() => {
+    const now = new Date();
+    const m = now.getMonth() + 1;
+    const y = now.getFullYear();
+    return `${y}-${String(m).padStart(2, "0")}-01|${lastDayOfMonth(y, m)}`;
+  });
   const [paidMonth, setPaidMonth] = useState("");
   const [customerFilter, setCustomerFilter] = useState("");
   const [productFilter, setProductFilter] = useState("");
@@ -66,7 +61,7 @@ export function SettlementsPage() {
 
   useEffect(() => {
     loadData();
-  }, [fromDate, toDate, paidMonth, customerFilter, productFilter, cityFilter, tab]);
+  }, [monthFilter, paidMonth, customerFilter, productFilter, cityFilter, tab]);
 
   const filteredCustomers = useMemo(() => {
     if (!cityFilter) return customers;
@@ -80,8 +75,11 @@ export function SettlementsPage() {
     setError(null);
     const params: Record<string, string> = {};
     if (tab === "pending") {
-      if (fromDate) params.from_date = fromDate;
-      if (toDate) params.to_date = toDate;
+      if (monthFilter) {
+        const [pf, pt] = monthFilter.split("|");
+        params.from_date = pf;
+        params.to_date = pt;
+      }
     } else if (paidMonth) {
       const [pf, pt] = paidMonth.split("|");
       params.from_date = pf;
@@ -106,15 +104,16 @@ export function SettlementsPage() {
   }
 
   async function handleMarkPaid(customerId: string) {
-    if (!fromDate || !toDate) return;
+    if (!monthFilter) return;
     setSettling(customerId);
     setError(null);
     setMessage(null);
+    const [pf, pt] = monthFilter.split("|");
     try {
       const result = await adminApi.markBulkPaid({
         customer_id: customerId,
-        from_date: fromDate,
-        to_date: toDate,
+        from_date: pf,
+        to_date: pt,
       });
       setMessage(`${result.updatedCount} entries marked as paid.`);
       await loadData();
@@ -150,13 +149,19 @@ export function SettlementsPage() {
     );
   }, [summary, paidData, tab]);
 
+  const defaultMonth = (() => {
+    const now = new Date();
+    const m = now.getMonth() + 1;
+    const y = now.getFullYear();
+    return `${y}-${String(m).padStart(2, "0")}-01|${lastDayOfMonth(y, m)}`;
+  })();
+
   const hasFilters = tab === "pending"
-    ? Boolean(customerFilter || productFilter || cityFilter || fromDate !== monthStart() || toDate !== today())
+    ? Boolean(customerFilter || productFilter || cityFilter || monthFilter !== defaultMonth)
     : Boolean(customerFilter || productFilter || cityFilter || paidMonth);
 
   function resetFilters() {
-    setFromDate(monthStart());
-    setToDate(today());
+    setMonthFilter(defaultMonth);
     setPaidMonth("");
     setCustomerFilter("");
     setProductFilter("");
@@ -200,12 +205,12 @@ export function SettlementsPage() {
         {tab === "pending" ? (
           <div className="flex flex-wrap items-end gap-3">
             <div>
-              <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">From</label>
-              <input type="date" className="border border-gray-300 rounded px-2 py-1.5 text-sm" value={fromDate} onChange={(e) => setFromDate(e.target.value)} />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">To</label>
-              <input type="date" className="border border-gray-300 rounded px-2 py-1.5 text-sm" value={toDate} onChange={(e) => setToDate(e.target.value)} />
+              <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Month</label>
+              <select className="border border-gray-300 rounded px-2 py-1.5 text-sm" value={monthFilter} onChange={(e) => setMonthFilter(e.target.value)}>
+                {getMonthOptions().map((o) => (
+                  <option key={o.value || "__all_pending__"} value={o.value}>{o.label}</option>
+                ))}
+              </select>
             </div>
             <div>
               <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">City</label>
