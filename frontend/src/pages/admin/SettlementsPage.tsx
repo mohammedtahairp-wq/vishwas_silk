@@ -34,6 +34,9 @@ export function SettlementsPage() {
 
   const [fromDate, setFromDate] = useState(monthStart);
   const [toDate, setToDate] = useState(today);
+  const [paidFromDate, setPaidFromDate] = useState("");
+  const [paidToDate, setPaidToDate] = useState("");
+  const [usePaidDateFilter, setUsePaidDateFilter] = useState(false);
   const [customerFilter, setCustomerFilter] = useState("");
   const [productFilter, setProductFilter] = useState("");
   const [cityFilter, setCityFilter] = useState("");
@@ -47,7 +50,7 @@ export function SettlementsPage() {
 
   useEffect(() => {
     loadData();
-  }, [fromDate, toDate, customerFilter, productFilter, cityFilter, tab]);
+  }, [fromDate, toDate, paidFromDate, paidToDate, usePaidDateFilter, customerFilter, productFilter, cityFilter, tab]);
 
   const filteredCustomers = useMemo(() => {
     if (!cityFilter) return customers;
@@ -60,8 +63,13 @@ export function SettlementsPage() {
     setLoading(true);
     setError(null);
     const params: Record<string, string> = {};
-    if (fromDate) params.from_date = fromDate;
-    if (toDate) params.to_date = toDate;
+    if (tab === "pending") {
+      if (fromDate) params.from_date = fromDate;
+      if (toDate) params.to_date = toDate;
+    } else if (usePaidDateFilter) {
+      if (paidFromDate) params.from_date = paidFromDate;
+      if (paidToDate) params.to_date = paidToDate;
+    }
     if (customerFilter) params.customer_id = customerFilter;
     if (productFilter) params.product_id = productFilter;
     if (cityFilter) params.city_id = cityFilter;
@@ -125,7 +133,20 @@ export function SettlementsPage() {
     );
   }, [summary, paidData, tab]);
 
-  const hasFilters = Boolean(customerFilter || productFilter || cityFilter || fromDate !== monthStart() || toDate !== today());
+  const hasFilters = tab === "pending"
+    ? Boolean(customerFilter || productFilter || cityFilter || fromDate !== monthStart() || toDate !== today())
+    : Boolean(customerFilter || productFilter || cityFilter || usePaidDateFilter);
+
+  function resetFilters() {
+    setFromDate(monthStart());
+    setToDate(today());
+    setPaidFromDate("");
+    setPaidToDate("");
+    setUsePaidDateFilter(false);
+    setCustomerFilter("");
+    setProductFilter("");
+    setCityFilter("");
+  }
 
   return (
     <div className="space-y-6">
@@ -161,51 +182,103 @@ export function SettlementsPage() {
       {message && <p className="text-sm text-green-600">{message}</p>}
 
       <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
-        <div className="flex flex-wrap items-end gap-3">
-          <div>
-            <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">From</label>
-            <input type="date" className="border border-gray-300 rounded px-2 py-1.5 text-sm" value={fromDate} onChange={(e) => setFromDate(e.target.value)} />
+        {tab === "pending" ? (
+          <div className="flex flex-wrap items-end gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">From</label>
+              <input type="date" className="border border-gray-300 rounded px-2 py-1.5 text-sm" value={fromDate} onChange={(e) => setFromDate(e.target.value)} />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">To</label>
+              <input type="date" className="border border-gray-300 rounded px-2 py-1.5 text-sm" value={toDate} onChange={(e) => setToDate(e.target.value)} />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">City</label>
+              <select className="border border-gray-300 rounded px-2 py-1.5 text-sm" value={cityFilter} onChange={(e) => { setCityFilter(e.target.value); setCustomerFilter(""); }}>
+                <option value="">All cities</option>
+                {cities.map((c) => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Customer</label>
+              <select className="border border-gray-300 rounded px-2 py-1.5 text-sm" value={customerFilter} onChange={(e) => setCustomerFilter(e.target.value)}>
+                <option value="">All customers</option>
+                {filteredCustomers.map((c) => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Product</label>
+              <select className="border border-gray-300 rounded px-2 py-1.5 text-sm" value={productFilter} onChange={(e) => setProductFilter(e.target.value)}>
+                <option value="">All products</option>
+                {products.map((p) => (
+                  <option key={p.id} value={p.id}>{p.name}</option>
+                ))}
+              </select>
+            </div>
+            {hasFilters && (
+              <button onClick={resetFilters} className="text-sm text-emerald-600 hover:underline pb-1.5">Reset</button>
+            )}
           </div>
-          <div>
-            <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">To</label>
-            <input type="date" className="border border-gray-300 rounded px-2 py-1.5 text-sm" value={toDate} onChange={(e) => setToDate(e.target.value)} />
+        ) : (
+          <div className="flex flex-wrap items-end gap-3">
+            <div className="flex items-center gap-2 pb-0.5">
+              <input
+                type="checkbox"
+                id="paidDateFilter"
+                checked={usePaidDateFilter}
+                onChange={(e) => setUsePaidDateFilter(e.target.checked)}
+                className="rounded border-gray-300 text-emerald-600"
+              />
+              <label htmlFor="paidDateFilter" className="text-sm text-gray-600">Filter by payment date</label>
+            </div>
+            {usePaidDateFilter && (
+              <>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Paid from</label>
+                  <input type="date" className="border border-gray-300 rounded px-2 py-1.5 text-sm" value={paidFromDate} onChange={(e) => setPaidFromDate(e.target.value)} />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Paid to</label>
+                  <input type="date" className="border border-gray-300 rounded px-2 py-1.5 text-sm" value={paidToDate} onChange={(e) => setPaidToDate(e.target.value)} />
+                </div>
+              </>
+            )}
+            <div>
+              <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">City</label>
+              <select className="border border-gray-300 rounded px-2 py-1.5 text-sm" value={cityFilter} onChange={(e) => { setCityFilter(e.target.value); setCustomerFilter(""); }}>
+                <option value="">All cities</option>
+                {cities.map((c) => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Customer</label>
+              <select className="border border-gray-300 rounded px-2 py-1.5 text-sm" value={customerFilter} onChange={(e) => setCustomerFilter(e.target.value)}>
+                <option value="">All customers</option>
+                {filteredCustomers.map((c) => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Product</label>
+              <select className="border border-gray-300 rounded px-2 py-1.5 text-sm" value={productFilter} onChange={(e) => setProductFilter(e.target.value)}>
+                <option value="">All products</option>
+                {products.map((p) => (
+                  <option key={p.id} value={p.id}>{p.name}</option>
+                ))}
+              </select>
+            </div>
+            {hasFilters && (
+              <button onClick={resetFilters} className="text-sm text-emerald-600 hover:underline pb-1.5">Reset</button>
+            )}
           </div>
-          <div>
-            <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">City</label>
-            <select className="border border-gray-300 rounded px-2 py-1.5 text-sm" value={cityFilter} onChange={(e) => { setCityFilter(e.target.value); setCustomerFilter(""); }}>
-              <option value="">All cities</option>
-              {cities.map((c) => (
-                <option key={c.id} value={c.id}>{c.name}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Customer</label>
-            <select className="border border-gray-300 rounded px-2 py-1.5 text-sm" value={customerFilter} onChange={(e) => setCustomerFilter(e.target.value)}>
-              <option value="">All customers</option>
-              {filteredCustomers.map((c) => (
-                <option key={c.id} value={c.id}>{c.name}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Product</label>
-            <select className="border border-gray-300 rounded px-2 py-1.5 text-sm" value={productFilter} onChange={(e) => setProductFilter(e.target.value)}>
-              <option value="">All products</option>
-              {products.map((p) => (
-                <option key={p.id} value={p.id}>{p.name}</option>
-              ))}
-            </select>
-          </div>
-          {hasFilters && (
-            <button
-              onClick={() => { setFromDate(monthStart()); setToDate(today()); setCustomerFilter(""); setProductFilter(""); setCityFilter(""); }}
-              className="text-sm text-emerald-600 hover:underline pb-1.5"
-            >
-              Reset
-            </button>
-          )}
-        </div>
+        )}
       </div>
 
       {tab === "pending" ? (
@@ -321,7 +394,7 @@ export function SettlementsPage() {
             {loading ? (
               <p className="px-4 py-8 text-sm text-gray-400 text-center">Loading...</p>
             ) : paidData.length === 0 ? (
-              <p className="px-4 py-8 text-sm text-gray-400 text-center">No paid entries found for this period.</p>
+              <p className="px-4 py-8 text-sm text-gray-400 text-center">No paid entries found.</p>
             ) : (
               <table className="min-w-full text-sm">
                 <thead className="bg-gray-50 text-gray-600 text-left">

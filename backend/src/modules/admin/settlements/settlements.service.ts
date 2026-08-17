@@ -293,9 +293,6 @@ export async function getPaidSettlementsSummary(filters?: {
   fromDate?: string;
   toDate?: string;
 }) {
-  const toDateEnd = filters?.toDate ? new Date(filters.toDate + "T23:59:59.999Z") : undefined;
-  const fromDate = filters?.fromDate ? new Date(filters.fromDate) : undefined;
-
   let cityVillageArea: string | undefined;
   if (filters?.cityId) {
     const city = await prisma.city.findUnique({ where: { id: filters.cityId }, select: { name: true } });
@@ -306,10 +303,15 @@ export async function getPaidSettlementsSummary(filters?: {
   if (filters?.customerId) where.customerId = filters.customerId;
   if (filters?.productId) where.productId = filters.productId;
   if (cityVillageArea) where.customer = { is: { villageArea: cityVillageArea } };
-  if (fromDate || toDateEnd) {
-    where.pickupDate = {};
-    if (fromDate) where.pickupDate.gte = fromDate;
-    if (toDateEnd) where.pickupDate.lte = toDateEnd;
+
+  if (filters?.fromDate || filters?.toDate) {
+    where.AND = [];
+    if (filters.fromDate) {
+      where.AND.push({ paidFromDate: { gte: new Date(filters.fromDate) } });
+    }
+    if (filters.toDate) {
+      where.AND.push({ paidToDate: { lte: new Date(filters.toDate + "T23:59:59.999Z") } });
+    }
   }
 
   const pickups = await prisma.pickup.findMany({
