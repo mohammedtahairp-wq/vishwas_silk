@@ -13,11 +13,12 @@ function queryDate(value: unknown, endOfDay = false) {
 }
 
 export async function listPickupsHandler(req: Request, res: Response) {
-  const { customer_id, rider_id, product_id, from, to } = req.query;
+  const { customer_id, rider_id, product_id, status, from, to } = req.query;
   const pickups = await pickupsService.listPickups({
     customerId: typeof customer_id === "string" ? customer_id : undefined,
     riderId: typeof rider_id === "string" ? rider_id : undefined,
     productId: typeof product_id === "string" ? product_id : undefined,
+    status: typeof status === "string" ? status : undefined,
     from: queryDate(from),
     to: queryDate(to, true),
   });
@@ -80,4 +81,14 @@ export async function deletePickupHandler(req: Request, res: Response) {
   const { id } = req.params;
   await pickupsService.deletePickup(id);
   res.status(204).end();
+}
+
+const markPaidSchema = z.object({
+  paid_date: z.string().refine((v) => !Number.isNaN(Date.parse(v)), "Invalid date"),
+});
+
+export async function markPickupPaidHandler(req: Request, res: Response) {
+  const { paid_date } = markPaidSchema.parse(req.body);
+  const pickup = await pickupsService.markPickupPaid(req.params.id, new Date(paid_date));
+  res.json(serializePickups([pickup], "admin")[0]);
 }

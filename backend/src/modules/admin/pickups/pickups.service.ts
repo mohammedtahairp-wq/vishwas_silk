@@ -6,6 +6,7 @@ interface PickupFilter {
   customerId?: string;
   riderId?: string;
   productId?: string;
+  status?: string;
   from?: Date;
   to?: Date;
 }
@@ -16,6 +17,7 @@ export function listPickups(filter: PickupFilter) {
       customerId: filter.customerId,
       riderId: filter.riderId,
       productId: filter.productId,
+      status: filter.status as any || undefined,
       pickupDate:
         filter.from || filter.to
           ? { gte: filter.from, lte: filter.to }
@@ -160,4 +162,16 @@ export async function priceAvailable(customerId: string, productId: string) {
 export async function deletePickup(id: string) {
   await assertPickupPending(id);
   await prisma.pickup.delete({ where: { id } });
+}
+
+export async function markPickupPaid(id: string, paidDate: Date) {
+  const pickup = await prisma.pickup.findUnique({ where: { id } });
+  if (!pickup) {
+    throw new NotFoundError("Pickup not found");
+  }
+  return prisma.pickup.update({
+    where: { id },
+    data: { status: "paid" },
+    include: { customer: true, rider: true, product: true },
+  });
 }

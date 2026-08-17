@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { adminApi } from "../../api/admin.api";
-import type { Customer, PickupAdmin, Transaction } from "../../api/types";
+import type { Customer, PickupAdmin } from "../../api/types";
 import { BarList, ColumnChart, Donut } from "./dashboard/charts";
 import { inrCurrency } from "./dashboard/format";
 
@@ -30,7 +30,6 @@ export function DashboardHome() {
   const navigate = useNavigate();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [pickups, setPickups] = useState<PickupAdmin[]>([]);
-  const [settlements, setSettlements] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [city, setCity] = useState("");
@@ -44,13 +43,11 @@ export function DashboardHome() {
     Promise.all([
       adminApi.listCustomers(),
       adminApi.listPickups({ from: fromDate, to: toDate }),
-      adminApi.listSettlements().catch(() => [] as Transaction[]),
       adminApi.listCities().catch(() => []),
     ])
-      .then(([c, p, s, cityRows]) => {
+      .then(([c, p, cityRows]) => {
         setCustomers(c);
         setPickups(p);
-        setSettlements(s);
         setCityFilterOptions(cityRows.map((row) => row.name).sort((a, b) => a.localeCompare(b)));
       })
       .catch(() => setError("Could not load dashboard data. Please try again."))
@@ -60,8 +57,8 @@ export function DashboardHome() {
   async function handleMarkPaid(id: string) {
     try {
       const paidDate = new Date().toISOString().slice(0, 10);
-      await adminApi.markSettlementPaid(id, paidDate);
-      setSettlements((prev) => prev.map((s) => (s.id === id ? { ...s, status: "paid", paidDate } : s)));
+      await adminApi.markPickupPaid(id, paidDate);
+      setPickups((prev) => prev.map((p) => (p.id === id ? { ...p, status: "paid" } : p)));
     } catch {
       /* ignore */
     }
@@ -86,31 +83,29 @@ export function DashboardHome() {
 
   const stats = useMemo(() => {
     const inCity = (custId: string | undefined) => !city || (custId != null && cityByCustomer.get(custId) === city);
-    const fCustomers = customers.filter((c) => inCity(c.id));
     const inDateRange = (iso: string) => {
       const date = iso.slice(0, 10);
       return (!fromDate || date >= fromDate) && (!toDate || date <= toDate);
     };
-    const settlementInRange = (settlement: Transaction) => {
-      const monthStart = `${settlement.year}-${String(settlement.month).padStart(2, "0")}-01`;
-      const monthEnd = dateInputValue(new Date(settlement.year, settlement.month, 0));
-      return (!fromDate || monthEnd >= fromDate) && (!toDate || monthStart <= toDate);
-    };
-    const fPickups = pickups.filter((p) => inCity(p.customerId) && inDateRange(p.pickupDate));
-    const fSettlements = settlements.filter((s) => inCity(s.customerId) && settlementInRange(s));
 
+    const fCustomers = customers.filter((c) => inCity(c.id));
+    const fPickups = pickups.filter((p) => inCity(p.customerId) && inDateRange(p.pickupDate));
+
+    const revenue = fPickups.reduce((sum, p) => sum + Number(p.amount || 0), 0);
+    const kg = fPickups.reduce((sum, p) => sum + Number(p.kg || 0), 0);
+
+    const pendingPickups = fPickups.filter((p) => p.status === "pending");
+    const pendingAmount = pendingPickups.reduce((sum, p) => sum + Number(p.amount || 0), 0);
+
+    const settledPickups = fPickups.filter((p) => p.status !== "pending");
+    const settledAmount = settledPickups.reduce((sum, p) => sum + Number(p.amount || 0), 0);
+
+    const pendingList = [...pendingPickups].sort((a, b) => b.pickupDate.localeCompare(a.pickupDate));
+
+    const buckets: { key: string; label: string; value: number }[] = [];
     const now = new Date();
     const thisMonth = now.getMonth();
     const thisYear = now.getFullYear();
-
-    const revenueThisMonth = fPickups.reduce((sum, p) => sum + Number(p.amount || 0), 0);
-    const kgThisMonth = fPickups.reduce((sum, p) => sum + Number(p.kg || 0), 0);
-
-    const pending = fSettlements.filter((s) => s.status === "pending");
-    const pendingAmount = pending.reduce((sum, s) => sum + Number(s.totalAmount || 0), 0);
-    const pendingList = [...pending].sort((a, b) => b.year - a.year || b.month - a.month);
-
-    const buckets: { key: string; label: string; value: number }[] = [];
     for (let i = 5; i >= 0; i--) {
       const d = new Date(thisYear, thisMonth - i, 1);
       buckets.push({ key: `${d.getFullYear()}-${d.getMonth()}`, label: MONTHS[d.getMonth()], value: 0 });
@@ -156,11 +151,12 @@ export function DashboardHome() {
     return {
       totalCustomers: fCustomers.length,
       activeCustomers: fCustomers.filter((c) => c.status === "active").length,
-      pickupsThisMonth: fPickups.length,
-      kgThisMonth,
-      revenueThisMonth,
-      pendingCount: pending.length,
+      revenue,
+      kg,
       pendingAmount,
+      pendingCount: pendingPickups.length,
+      settledAmount,
+      settledCount: settledPickups.length,
       pendingList,
       revenueByMonth: buckets,
       byProduct,
@@ -168,7 +164,7 @@ export function DashboardHome() {
       revenueByCity,
       customersByCity,
     };
-  }, [customers, pickups, settlements, city, cityByCustomer, cities, fromDate, toDate]);
+  }, [customers, pickups, city, cityByCustomer, cities, fromDate, toDate]);
 
   if (loading) {
     return (
@@ -225,7 +221,6 @@ export function DashboardHome() {
       />
 
       <motion.div variants={container} initial="hidden" animate="show">
-        {/* KPI tiles */}
         <motion.div variants={item} className="mb-6">
           <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-400">
             Showing: {scope} · {period}
@@ -233,8 +228,8 @@ export function DashboardHome() {
           <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4">
             <KpiCard
               label="Revenue"
-              value={inrCurrency(stats.revenueThisMonth)}
-              hint={`${Math.round(stats.kgThisMonth)} kg collected`}
+              value={inrCurrency(stats.revenue)}
+              hint={`${Math.round(stats.kg)} kg collected`}
               icon={
                 <div className="w-11 h-11 rounded-xl flex items-center justify-center" style={{ background: "linear-gradient(135deg, #059669, #10b981)" }}>
                   <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -244,33 +239,9 @@ export function DashboardHome() {
               }
             />
             <KpiCard
-              label="Pickups"
-              value={String(stats.pickupsThisMonth)}
-              hint="across all riders"
-              icon={
-                <div className="w-11 h-11 rounded-xl flex items-center justify-center" style={{ background: "linear-gradient(135deg, #06b6d4, #3b82f6)" }}>
-                  <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                  </svg>
-                </div>
-              }
-            />
-            <KpiCard
-              label="Customers"
-              value={String(stats.totalCustomers)}
-              hint={`${stats.activeCustomers} active`}
-              icon={
-                <div className="w-11 h-11 rounded-xl flex items-center justify-center" style={{ background: "linear-gradient(135deg, #10b981, #059669)" }}>
-                  <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                  </svg>
-                </div>
-              }
-            />
-            <KpiCard
               label="Pending settlements"
               value={inrCurrency(stats.pendingAmount)}
-              hint={`${stats.pendingCount} awaiting payment`}
+              hint={`${stats.pendingCount} entries awaiting payment`}
               accent={stats.pendingCount > 0}
               icon={
                 <div className={`w-11 h-11 rounded-xl flex items-center justify-center ${stats.pendingCount > 0 ? "" : "opacity-60"}`} style={{ background: stats.pendingCount > 0 ? "linear-gradient(135deg, #f97316, #ef4444)" : "linear-gradient(135deg, #94a3b8, #64748b)" }}>
@@ -280,10 +251,33 @@ export function DashboardHome() {
                 </div>
               }
             />
+            <KpiCard
+              label="Payment settled"
+              value={inrCurrency(stats.settledAmount)}
+              hint={`${stats.settledCount} entries paid`}
+              icon={
+                <div className="w-11 h-11 rounded-xl flex items-center justify-center" style={{ background: "linear-gradient(135deg, #10b981, #059669)" }}>
+                  <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+              }
+            />
+            <KpiCard
+              label="Customers"
+              value={String(stats.totalCustomers)}
+              hint={`${stats.activeCustomers} active`}
+              icon={
+                <div className="w-11 h-11 rounded-xl flex items-center justify-center" style={{ background: "linear-gradient(135deg, #06b6d4, #3b82f6)" }}>
+                  <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                  </svg>
+                </div>
+              }
+            />
           </div>
         </motion.div>
 
-        {/* Pending settlements */}
         {stats.pendingList.length > 0 && (
           <motion.div variants={item} className="mb-6">
             <Card title="Pending settlements" subtitle={`${stats.pendingList.length} awaiting payment · ${scope}`}>
@@ -292,23 +286,23 @@ export function DashboardHome() {
                   <thead className="bg-gray-50 text-gray-600 text-left">
                     <tr>
                       <th className="px-3 py-2">Customer</th>
-                      <th className="px-3 py-2">Month/Year</th>
-                      <th className="px-3 py-2">Total kg</th>
+                      <th className="px-3 py-2">Date</th>
+                      <th className="px-3 py-2">Product</th>
+                      <th className="px-3 py-2 text-right">Kg</th>
                       <th className="px-3 py-2 text-right">Amount</th>
                       <th className="px-3 py-2"></th>
                     </tr>
                   </thead>
                   <tbody>
-                    {stats.pendingList.map((s) => (
-                      <tr key={s.id} className="border-t border-gray-100">
-                        <td className="px-3 py-2 font-medium text-gray-900">{s.customer?.name ?? "—"}</td>
-                        <td className="px-3 py-2">
-                          {MONTHS[s.month - 1]} {s.year}
-                        </td>
-                        <td className="px-3 py-2">{Number(s.totalKg)} kg</td>
-                        <td className="px-3 py-2 text-right font-medium tabular-nums">{inrCurrency(Number(s.totalAmount))}</td>
+                    {stats.pendingList.slice(0, 10).map((p) => (
+                      <tr key={p.id} className="border-t border-gray-100">
+                        <td className="px-3 py-2 font-medium text-gray-900">{p.customer?.name ?? "—"}</td>
+                        <td className="px-3 py-2">{new Date(p.pickupDate).toLocaleDateString("en-IN")}</td>
+                        <td className="px-3 py-2">{p.product?.name ?? "—"}</td>
+                        <td className="px-3 py-2 text-right">{Number(p.kg).toFixed(2)}</td>
+                        <td className="px-3 py-2 text-right font-medium tabular-nums">{inrCurrency(Number(p.amount))}</td>
                         <td className="px-3 py-2 text-right">
-                          <button onClick={() => handleMarkPaid(s.id)} className="text-emerald-600 hover:underline whitespace-nowrap">
+                          <button onClick={() => handleMarkPaid(p.id)} className="text-emerald-600 hover:underline whitespace-nowrap">
                             Mark paid
                           </button>
                         </td>
@@ -326,7 +320,6 @@ export function DashboardHome() {
           </motion.div>
         )}
 
-        {/* City comparison */}
         <motion.div variants={item} className="grid grid-cols-1 gap-5 lg:grid-cols-2 mb-6">
           <Card title="Revenue by city" subtitle={`Selected period · all cities`}>
             <BarList
@@ -344,7 +337,6 @@ export function DashboardHome() {
           </Card>
         </motion.div>
 
-        {/* Revenue trend + customer split */}
         <motion.div variants={item} className="grid grid-cols-1 gap-5 lg:grid-cols-3 mb-6">
           <Card className="lg:col-span-2" title="Revenue trend" subtitle={`Last 6 months · ${scope}`}>
             <ColumnChart data={stats.revenueByMonth} valueFormat={(n) => (n >= 1000 ? `${Math.round(n / 1000)}k` : String(Math.round(n)))} prefix="₹" />
@@ -356,7 +348,6 @@ export function DashboardHome() {
           </Card>
         </motion.div>
 
-        {/* Product + rider breakdowns */}
         <motion.div variants={item} className="grid grid-cols-1 gap-5 lg:grid-cols-2">
           <Card title="Customers by city" subtitle="All cities">
             <BarList data={stats.customersByCity} highlight={city} emptyLabel="No customers yet." />
@@ -400,7 +391,7 @@ function Header({
         <h1 className="text-2xl font-bold tracking-tight" style={{ color: "#064e3b" }}>
           Dashboard
         </h1>
-        <p className="mt-1 text-sm text-gray-500">Overview of pickups, revenue and settlements.</p>
+        <p className="mt-1 text-sm text-gray-500">Overview of revenue, settlements and payments.</p>
       </div>
       <div className="flex flex-wrap items-end justify-end gap-3">
         <label className="flex items-center gap-2 text-sm text-gray-500">
