@@ -280,8 +280,76 @@ export async function markCustomerSettlementPaid(customerId: string, fromDate: D
       status: "pending",
       pickupDate: { gte: fromDate, lte: toDateEnd },
     },
-    data: { status: "paid" },
+    data: { status: "paid", paidFromDate: fromDate, paidToDate: toDate },
   });
 
   return { updatedCount: result.count };
+}
+
+export async function getPaidSettlementsSummary(filters?: {
+  customerId?: string;
+  productId?: string;
+  cityId?: string;
+  fromDate?: string;
+  toDate?: string;
+}) {
+  const toDateEnd = filters?.toDate ? new Date(filters.toDate + "T23:59:59.999Z") : undefined;
+  const fromDate = filters?.fromDate ? new Date(filters.fromDate) : undefined;
+
+  let cityVillageArea: string | undefined;
+  if (filters?.cityId) {
+    const city = await prisma.city.findUnique({ where: { id: filters.cityId }, select: { name: true } });
+    if (city) cityVillageArea = city.name;
+  }
+
+  const where: any = { status: "paid" };
+  if (filters?.customerId) where.customerId = filters.customerId;
+  if (filters?.productId) where.productId = filters.productId;
+  if (cityVillageArea) where.customer = { is: { villageArea: cityVillageArea } };
+  if (fromDate || toDateEnd) {
+    where.pickupDate = {};
+    if (fromDate) where.pickupDate.gte = fromDate;
+    if (toDateEnd) where.pickupDate.lte = toDateEnd;
+  }
+
+  const pickups = await prisma.pickup.findMany({
+    where,
+    include: { customer: true, product: true },
+    orderBy: { pickupDate: "desc" },
+  });
+
+  const grouped = new Map<string, {
+    customerId: string;
+    customerName: string;
+    paidFromDate: Date | null;
+    paidToDate: Date | null;
+    totalPickups: number;
+    totalKg: number;
+    totalAmount: number;
+  }>();
+
+  for (const p of pickups) {
+    const paidFrom = p.paidFromDate?.toISOString().slice(0, 10) ?? "unknown";
+    const paidTo = p.paidToDate?.toISOString().slice(0, 10) ?? "unknown";
+    const key = `${p.customerId}|${paidFrom}|${paidTo}`;
+    const existing = grouped.get(key) ?? {
+      customerId: p.customerId,
+      customerName: p.customer?.name ?? "Unknown",
+      paidFromDate: p.paidFromDate,
+      paidToDate: p.paidToDate,
+      totalPickups: 0,
+      totalKg: 0,
+      totalAmount: 0,
+    };
+    existing.totalPickups += 1;
+    existing.totalKg += Number(p.kg);
+    existing.totalAmount += Number(p.amount);
+    grouped.set(key, existing);
+  }
+
+  return Array.from(grouped.values()).sort((a, b) => {
+    const dateA = a.paidToDate ?? new Date(0);
+    const dateB = b.paidToDate ?? new Date(0);
+    return dateB.getTime() - dateA.getTime();
+  });
 }

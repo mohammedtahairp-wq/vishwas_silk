@@ -13,6 +13,8 @@ function makePickup(): Pickup {
     pricePerKgSnapshot: 40 as unknown as Pickup["pricePerKgSnapshot"],
     amount: 400 as unknown as Pickup["amount"],
     status: "pending",
+    paidFromDate: null,
+    paidToDate: null,
     createdAt: new Date("2026-07-01"),
   };
 }

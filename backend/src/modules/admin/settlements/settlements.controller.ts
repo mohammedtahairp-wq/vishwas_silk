@@ -92,3 +92,23 @@ export async function markBulkPaidHandler(req: Request, res: Response) {
   );
   res.json(result);
 }
+
+const paidSummaryQuerySchema = z.object({
+  customer_id: z.string().uuid().optional(),
+  product_id: z.string().uuid().optional(),
+  city_id: z.string().uuid().optional(),
+  from_date: z.string().optional(),
+  to_date: z.string().optional(),
+});
+
+export async function paidSettlementsSummaryHandler(req: Request, res: Response) {
+  const parsed = paidSummaryQuerySchema.parse(req.query);
+  const summary = await settlementsService.getPaidSettlementsSummary({
+    customerId: parsed.customer_id,
+    productId: parsed.product_id,
+    cityId: parsed.city_id,
+    fromDate: parsed.from_date,
+    toDate: parsed.to_date,
+  });
+  res.json(summary);
+}

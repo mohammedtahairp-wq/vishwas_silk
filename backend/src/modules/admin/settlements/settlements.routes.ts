@@ -7,11 +7,13 @@ import {
   markSettlementPaidHandler,
   settlementsSummaryHandler,
   markBulkPaidHandler,
+  paidSettlementsSummaryHandler,
 } from "./settlements.controller";
 
 export const settlementsRouter = Router();
 
 settlementsRouter.get("/summary", asyncHandler(settlementsSummaryHandler));
+settlementsRouter.get("/paid-summary", asyncHandler(paidSettlementsSummaryHandler));
 settlementsRouter.post("/preview", asyncHandler(previewSettlementHandler));
 settlementsRouter.post("/generate", asyncHandler(generateSettlementHandler));
 settlementsRouter.get("/", asyncHandler(listSettlementsHandler));

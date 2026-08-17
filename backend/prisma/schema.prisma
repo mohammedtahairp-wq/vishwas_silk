@@ -136,6 +136,8 @@ model Pickup {
   pricePerKgSnapshot Decimal      @map("price_per_kg_snapshot") @db.Decimal(12, 2)
   amount             Decimal      @db.Decimal(12, 2)
   status             PickupStatus @default(pending)
+  paidFromDate       DateTime?    @map("paid_from_date") @db.Date
+  paidToDate         DateTime?    @map("paid_to_date") @db.Date
   createdAt          DateTime     @default(now()) @map("created_at")
 
   customer Customer @relation(fields: [customerId], references: [id])

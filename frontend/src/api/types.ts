@@ -146,3 +146,13 @@ export interface SettlementSummary {
   paidKg: number;
   paidAmount: number;
 }
+
+export interface PaidSettlementEntry {
+  customerId: string;
+  customerName: string;
+  paidFromDate: string | null;
+  paidToDate: string | null;
+  totalPickups: number;
+  totalKg: number;
+  totalAmount: number;
+}
