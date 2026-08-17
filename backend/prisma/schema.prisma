@@ -54,6 +54,7 @@ model Customer {
   phone           String   @unique
   address         String?
   villageArea     String?  @map("village_area")
+  cityId          String?  @map("city_id")
   assignedRiderId String?  @map("assigned_rider_id")
   status          Status   @default(active)
   createdById     String   @map("created_by")
@@ -61,6 +62,7 @@ model Customer {
   updatedAt       DateTime @updatedAt @map("updated_at")
 
   assignedRider Rider?                 @relation(fields: [assignedRiderId], references: [id])
+  city          City?                  @relation(fields: [cityId], references: [id])
   createdBy     User                   @relation("CustomerCreatedBy", fields: [createdById], references: [id])
   prices        CustomerProductPrice[]
   pickups       Pickup[]
@@ -98,9 +100,10 @@ model Product {
 }
 
 model City {
-  id        String   @id @default(uuid())
-  name      String   @unique
-  createdAt DateTime @default(now()) @map("created_at")
+  id        String     @id @default(uuid())
+  name      String     @unique
+  createdAt DateTime   @default(now()) @map("created_at")
+  customers Customer[]
 
   @@map("cities")
 }

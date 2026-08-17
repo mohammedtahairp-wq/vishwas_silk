@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { adminApi } from "../../api/admin.api";
-import type { Customer, Product, SettlementSummary } from "../../api/types";
+import type { City, Customer, Product, SettlementSummary } from "../../api/types";
 import { inrCurrency } from "./dashboard/format";
 
 function toLocalDate(d: Date) {
@@ -22,6 +22,7 @@ function today() {
 export function SettlementsPage() {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
+  const [cities, setCities] = useState<City[]>([]);
   const [summary, setSummary] = useState<SettlementSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -31,17 +32,18 @@ export function SettlementsPage() {
   const [toDate, setToDate] = useState(today);
   const [customerFilter, setCustomerFilter] = useState("");
   const [productFilter, setProductFilter] = useState("");
+  const [cityFilter, setCityFilter] = useState("");
   const [settling, setSettling] = useState<string | null>(null);
 
   useEffect(() => {
-    Promise.all([adminApi.listCustomers(), adminApi.listProducts()])
-      .then(([c, p]) => { setCustomers(c); setProducts(p); })
+    Promise.all([adminApi.listCustomers(), adminApi.listProducts(), adminApi.listCities()])
+      .then(([c, p, ci]) => { setCustomers(c); setProducts(p); setCities(ci); })
       .catch(() => setError("Could not load data."));
   }, []);
 
   useEffect(() => {
     loadSummary();
-  }, [fromDate, toDate, customerFilter, productFilter]);
+  }, [fromDate, toDate, customerFilter, productFilter, cityFilter]);
 
   async function loadSummary() {
     setLoading(true);
@@ -51,6 +53,7 @@ export function SettlementsPage() {
     if (toDate) params.to_date = toDate;
     if (customerFilter) params.customer_id = customerFilter;
     if (productFilter) params.product_id = productFilter;
+    if (cityFilter) params.city_id = cityFilter;
     try {
       const data = await adminApi.settlementsSummary(params);
       setSummary(data);
@@ -94,7 +97,7 @@ export function SettlementsPage() {
     );
   }, [summary]);
 
-  const hasFilters = Boolean(customerFilter || productFilter || fromDate !== monthStart() || toDate !== today());
+  const hasFilters = Boolean(customerFilter || productFilter || cityFilter || fromDate !== monthStart() || toDate !== today());
 
   return (
     <div className="space-y-6">
@@ -126,6 +129,15 @@ export function SettlementsPage() {
             </select>
           </div>
           <div>
+            <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">City</label>
+            <select className="border border-gray-300 rounded px-2 py-1.5 text-sm" value={cityFilter} onChange={(e) => setCityFilter(e.target.value)}>
+              <option value="">All cities</option>
+              {cities.map((c) => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
+            </select>
+          </div>
+          <div>
             <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Product</label>
             <select className="border border-gray-300 rounded px-2 py-1.5 text-sm" value={productFilter} onChange={(e) => setProductFilter(e.target.value)}>
               <option value="">All products</option>
@@ -136,7 +148,7 @@ export function SettlementsPage() {
           </div>
           {hasFilters && (
             <button
-              onClick={() => { setFromDate(monthStart()); setToDate(today()); setCustomerFilter(""); setProductFilter(""); }}
+              onClick={() => { setFromDate(monthStart()); setToDate(today()); setCustomerFilter(""); setProductFilter(""); setCityFilter(""); }}
               className="text-sm text-emerald-600 hover:underline pb-1.5"
             >
               Reset
