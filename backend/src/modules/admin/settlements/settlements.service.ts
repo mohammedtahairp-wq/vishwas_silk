@@ -190,3 +190,90 @@ export async function markSettlementPaid(id: string, paidDate: Date) {
     data: { status: "paid", paidDate },
   });
 }
+
+export async function getSettlementsSummary(filters?: {
+  customerId?: string;
+  productId?: string;
+  fromDate?: string;
+  toDate?: string;
+}) {
+  const toDateEnd = filters?.toDate ? new Date(filters.toDate + "T23:59:59.999Z") : undefined;
+  const fromDate = filters?.fromDate ? new Date(filters.fromDate) : undefined;
+
+  const where: any = {};
+  if (filters?.customerId) where.customerId = filters.customerId;
+  if (filters?.productId) where.productId = filters.productId;
+  if (fromDate || toDateEnd) {
+    where.pickupDate = {};
+    if (fromDate) where.pickupDate.gte = fromDate;
+    if (toDateEnd) where.pickupDate.lte = toDateEnd;
+  }
+
+  const pickups = await prisma.pickup.findMany({
+    where,
+    include: { customer: true, product: true },
+    orderBy: { pickupDate: "desc" },
+  });
+
+  const grouped = new Map<string, {
+    customerId: string;
+    customerName: string;
+    totalPickups: number;
+    totalKg: number;
+    totalAmount: number;
+    pendingCount: number;
+    pendingKg: number;
+    pendingAmount: number;
+    paidCount: number;
+    paidKg: number;
+    paidAmount: number;
+  }>();
+
+  for (const p of pickups) {
+    const key = p.customerId;
+    const existing = grouped.get(key) ?? {
+      customerId: p.customerId,
+      customerName: p.customer?.name ?? "Unknown",
+      totalPickups: 0,
+      totalKg: 0,
+      totalAmount: 0,
+      pendingCount: 0,
+      pendingKg: 0,
+      pendingAmount: 0,
+      paidCount: 0,
+      paidKg: 0,
+      paidAmount: 0,
+    };
+    existing.totalPickups += 1;
+    existing.totalKg += Number(p.kg);
+    existing.totalAmount += Number(p.amount);
+    if (p.status === "pending") {
+      existing.pendingCount += 1;
+      existing.pendingKg += Number(p.kg);
+      existing.pendingAmount += Number(p.amount);
+    } else {
+      existing.paidCount += 1;
+      existing.paidKg += Number(p.kg);
+      existing.paidAmount += Number(p.amount);
+    }
+    grouped.set(key, existing);
+  }
+
+  return Array.from(grouped.values()).sort((a, b) => b.pendingAmount - a.pendingAmount);
+}
+
+export async function markCustomerSettlementPaid(customerId: string, fromDate: Date, toDate: Date) {
+  const toDateEnd = new Date(toDate);
+  toDateEnd.setUTCHours(23, 59, 59, 999);
+
+  const result = await prisma.pickup.updateMany({
+    where: {
+      customerId,
+      status: "pending",
+      pickupDate: { gte: fromDate, lte: toDateEnd },
+    },
+    data: { status: "paid" },
+  });
+
+  return { updatedCount: result.count };
+}

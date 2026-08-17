@@ -18,6 +18,19 @@ const markPaidSchema = z.object({
   paid_date: z.string().refine((v) => !Number.isNaN(Date.parse(v)), "Invalid date"),
 });
 
+const summaryQuerySchema = z.object({
+  customer_id: z.string().uuid().optional(),
+  product_id: z.string().uuid().optional(),
+  from_date: z.string().optional(),
+  to_date: z.string().optional(),
+});
+
+const markBulkPaidSchema = z.object({
+  customer_id: z.string().uuid(),
+  from_date: z.string().refine((v) => !Number.isNaN(Date.parse(v)), "Invalid date"),
+  to_date: z.string().refine((v) => !Number.isNaN(Date.parse(v)), "Invalid date"),
+});
+
 export async function previewSettlementHandler(req: Request, res: Response) {
   const body = previewSchema.parse(req.body);
   const preview = await settlementsService.previewSettlement(
@@ -55,4 +68,25 @@ export async function markSettlementPaidHandler(req: Request, res: Response) {
   const { paid_date } = markPaidSchema.parse(req.body);
   const transaction = await settlementsService.markSettlementPaid(req.params.id, new Date(paid_date));
   res.json(transaction);
+}
+
+export async function settlementsSummaryHandler(req: Request, res: Response) {
+  const parsed = summaryQuerySchema.parse(req.query);
+  const summary = await settlementsService.getSettlementsSummary({
+    customerId: parsed.customer_id,
+    productId: parsed.product_id,
+    fromDate: parsed.from_date,
+    toDate: parsed.to_date,
+  });
+  res.json(summary);
+}
+
+export async function markBulkPaidHandler(req: Request, res: Response) {
+  const body = markBulkPaidSchema.parse(req.body);
+  const result = await settlementsService.markCustomerSettlementPaid(
+    body.customer_id,
+    new Date(body.from_date),
+    new Date(body.to_date)
+  );
+  res.json(result);
 }

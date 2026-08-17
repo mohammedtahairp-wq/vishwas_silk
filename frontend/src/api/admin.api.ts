@@ -1,5 +1,5 @@
 import { apiClient } from "./client";
-import type { City, CreateCustomerResult, CreateRiderResult, Customer, PickupAdmin, Price, Product, Rider, SettlementPreview, Transaction } from "./types";
+import type { City, CreateCustomerResult, CreateRiderResult, Customer, PickupAdmin, Price, Product, Rider, SettlementPreview, SettlementSummary, Transaction } from "./types";
 
 export const adminApi = {
   // Cities
@@ -63,4 +63,9 @@ export const adminApi = {
     apiClient.post<Transaction>("/admin/settlements/generate", data).then((r) => r.data),
   markSettlementPaid: (id: string, paidDate: string) =>
     apiClient.put<Transaction>(`/admin/settlements/${id}/mark-paid`, { paid_date: paidDate }).then((r) => r.data),
+
+  settlementsSummary: (params?: { customer_id?: string; product_id?: string; from_date?: string; to_date?: string }) =>
+    apiClient.get<SettlementSummary[]>("/admin/settlements/summary", { params }).then((r) => r.data),
+  markBulkPaid: (data: { customer_id: string; from_date: string; to_date: string }) =>
+    apiClient.post<{ updatedCount: number }>("/admin/settlements/mark-bulk-paid", data).then((r) => r.data),
 };

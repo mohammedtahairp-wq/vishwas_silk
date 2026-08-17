@@ -131,3 +131,17 @@ export interface SettlementPreview {
     count: number;
   }[];
 }
+
+export interface SettlementSummary {
+  customerId: string;
+  customerName: string;
+  totalPickups: number;
+  totalKg: number;
+  totalAmount: number;
+  pendingCount: number;
+  pendingKg: number;
+  pendingAmount: number;
+  paidCount: number;
+  paidKg: number;
+  paidAmount: number;
+}
