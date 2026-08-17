@@ -204,7 +204,7 @@ export async function getSettlementsSummary(filters?: {
   const where: any = {};
   if (filters?.customerId) where.customerId = filters.customerId;
   if (filters?.productId) where.productId = filters.productId;
-  if (filters?.cityId) where.customer = { cityId: filters.cityId };
+  if (filters?.cityId) where.customer = { is: { cityId: filters.cityId } };
   if (fromDate || toDateEnd) {
     where.pickupDate = {};
     if (fromDate) where.pickupDate.gte = fromDate;
