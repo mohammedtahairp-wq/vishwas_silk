@@ -32,6 +32,10 @@ export function LoginPage() {
     if (!recaptchaVerifier.current && recaptchaContainerRef.current) {
       recaptchaVerifier.current = new RecaptchaVerifier(firebaseAuth, recaptchaContainerRef.current, {
         size: "invisible",
+        "expired-callback": () => {
+          setError("reCAPTCHA expired. Please try again.");
+          recaptchaVerifier.current = null;
+        },
       });
     }
     return recaptchaVerifier.current!;
@@ -48,7 +52,8 @@ export function LoginPage() {
       setConfirmationResult(result);
       setStep("otp");
     } catch (err) {
-      setError(apiErrorMessage(err, "Failed to send OTP. Please check the phone number."));
+      console.error("OTP send error:", err);
+      setError(apiErrorMessage(err, "Failed to send OTP. Please check the phone number.") + ` (${(err as Error)?.name || "unknown"})`);
       recaptchaVerifier.current?.clear();
       recaptchaVerifier.current = null;
     } finally {
