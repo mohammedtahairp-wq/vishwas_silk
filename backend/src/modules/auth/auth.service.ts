@@ -2,28 +2,18 @@ import jwt from "jsonwebtoken";
 import { prisma } from "../../lib/prisma";
 import { env } from "../../config/env";
 import { UnauthorizedError, NotFoundError } from "../../lib/errors";
-import { firebaseAuth } from "../../config/firebase";
+import { verifyOtp } from "./otp.service";
 
-function normalizePhone(firebasePhone: string): string {
-  return firebasePhone.replace(/^\+91/, "").replace(/^\+/, "");
+function normalizePhone(phone: string): string {
+  return phone.replace(/^\+91/, "").replace(/^\+/, "");
 }
 
-export async function verifyFirebaseAndLogin(idToken: string) {
-  let decoded;
-  try {
-    decoded = await firebaseAuth.verifyIdToken(idToken);
-  } catch {
-    throw new UnauthorizedError("Invalid or expired verification code");
-  }
+export async function verifyOtpAndLogin(phone: string, otp: string) {
+  verifyOtp(phone, otp);
 
-  const firebasePhone = decoded.phone_number;
-  if (!firebasePhone) {
-    throw new UnauthorizedError("No phone number associated with this account");
-  }
+  const normalizedPhone = normalizePhone(phone);
 
-  const phone = normalizePhone(firebasePhone);
-
-  const user = await prisma.user.findUnique({ where: { loginPhone: phone } });
+  const user = await prisma.user.findUnique({ where: { loginPhone: normalizedPhone } });
   if (!user || user.status !== "active") {
     throw new NotFoundError("User not found");
   }

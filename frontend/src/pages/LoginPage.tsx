@@ -1,44 +1,33 @@
-import { useState, useRef, useEffect } from "react";
+import { useState } from "react";
 import type { FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { RecaptchaVerifier, signInWithPhoneNumber } from "firebase/auth";
-import type { ConfirmationResult } from "firebase/auth";
-import { firebaseAuth } from "../config/firebase";
 import { useAuth } from "../auth/AuthContext";
-import { apiErrorMessage } from "../api/client";
+import { apiClient, apiErrorMessage } from "../api/client";
 
 type Step = "phone" | "otp";
 
 export function LoginPage() {
-  const { loginWithPhone } = useAuth();
+  const { loginWithOtp } = useAuth();
   const navigate = useNavigate();
   const [step, setStep] = useState<Step>("phone");
   const [phone, setPhone] = useState("");
   const [otp, setOtp] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [confirmationResult, setConfirmationResult] = useState<ConfirmationResult | null>(null);
-  const recaptchaVerifier = useRef<RecaptchaVerifier | null>(null);
-  const recaptchaContainerRef = useRef<HTMLDivElement | null>(null);
+  const [resendTimer, setResendTimer] = useState(0);
 
-  useEffect(() => {
-    return () => {
-      recaptchaVerifier.current?.clear();
-    };
-  }, []);
-
-  function ensureRecaptcha() {
-    if (!recaptchaVerifier.current && recaptchaContainerRef.current) {
-      recaptchaVerifier.current = new RecaptchaVerifier(firebaseAuth, recaptchaContainerRef.current, {
-        size: "invisible",
-        "expired-callback": () => {
-          setError("reCAPTCHA expired. Please try again.");
-          recaptchaVerifier.current = null;
-        },
+  function startResendTimer() {
+    setResendTimer(30);
+    const interval = setInterval(() => {
+      setResendTimer((prev) => {
+        if (prev <= 1) {
+          clearInterval(interval);
+          return 0;
+        }
+        return prev - 1;
       });
-    }
-    return recaptchaVerifier.current!;
+    }, 1000);
   }
 
   async function handleSendOtp(e: FormEvent) {
@@ -46,16 +35,24 @@ export function LoginPage() {
     setError(null);
     setSubmitting(true);
     try {
-      const verifier = ensureRecaptcha();
-      const fullPhone = `+91${phone.trim()}`;
-      const result = await signInWithPhoneNumber(firebaseAuth, fullPhone, verifier);
-      setConfirmationResult(result);
+      await apiClient.post("/auth/send-otp", { phone: phone.trim() });
+      startResendTimer();
       setStep("otp");
     } catch (err) {
-      console.error("OTP send error:", err);
-      setError(apiErrorMessage(err, "Failed to send OTP. Please check the phone number.") + ` (${(err as Error)?.name || "unknown"})`);
-      recaptchaVerifier.current?.clear();
-      recaptchaVerifier.current = null;
+      setError(apiErrorMessage(err, "Failed to send OTP. Please try again."));
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function handleResendOtp() {
+    setError(null);
+    setSubmitting(true);
+    try {
+      await apiClient.post("/auth/send-otp", { phone: phone.trim() });
+      startResendTimer();
+    } catch (err) {
+      setError(apiErrorMessage(err, "Failed to resend OTP. Please try again."));
     } finally {
       setSubmitting(false);
     }
@@ -63,15 +60,10 @@ export function LoginPage() {
 
   async function handleVerifyOtp(e: FormEvent) {
     e.preventDefault();
-    if (!confirmationResult) return;
     setError(null);
     setSubmitting(true);
     try {
-      await confirmationResult.confirm(otp);
-      const user = firebaseAuth.currentUser;
-      if (!user) throw new Error("Not authenticated with Firebase");
-      const idToken = await user.getIdToken();
-      const role = await loginWithPhone(idToken);
+      const role = await loginWithOtp(phone.trim(), otp);
       navigate(`/${role}`, { replace: true });
     } catch (err) {
       setError(apiErrorMessage(err, "Invalid OTP. Please try again."));
@@ -84,9 +76,6 @@ export function LoginPage() {
     setStep("phone");
     setOtp("");
     setError(null);
-    setConfirmationResult(null);
-    recaptchaVerifier.current?.clear();
-    recaptchaVerifier.current = null;
   }
 
   return (
@@ -96,8 +85,6 @@ export function LoginPage() {
         <div className="absolute -bottom-40 -left-40 w-96 h-96 rounded-full opacity-20" style={{ background: "linear-gradient(135deg, #6ee7b7, #10b981)" }} />
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full opacity-10" style={{ background: "radial-gradient(circle, #10b981, transparent)" }} />
       </div>
-
-      <div ref={recaptchaContainerRef} />
 
       <motion.div
         initial={{ opacity: 0, y: 24, scale: 0.96 }}
@@ -252,6 +239,21 @@ export function LoginPage() {
                   )}
                 </motion.button>
               </div>
+
+              {resendTimer > 0 ? (
+                <p className="text-center text-xs text-gray-400 font-medium">
+                  Resend OTP in {resendTimer}s
+                </p>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleResendOtp}
+                  disabled={submitting}
+                  className="w-full text-center text-xs text-emerald-600 font-bold hover:underline disabled:opacity-50"
+                >
+                  Resend OTP
+                </button>
+              )}
             </form>
           )}
         </div>
