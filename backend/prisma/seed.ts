@@ -1,11 +1,6 @@
 import { PrismaClient } from "@prisma/client";
-import bcrypt from "bcrypt";
 
 const prisma = new PrismaClient();
-
-async function hash(password: string) {
-  return bcrypt.hash(password, 10);
-}
 
 async function main() {
   await Promise.all(
@@ -29,11 +24,10 @@ async function main() {
   );
 
   const admin = await prisma.user.upsert({
-    where: { username: "admin" },
+    where: { loginPhone: "9999900000" },
     update: {},
     create: {
-      username: "admin",
-      passwordHash: await hash("Admin@123"),
+      loginPhone: "9999900000",
       role: "admin",
       status: "active",
     },
@@ -46,11 +40,10 @@ async function main() {
     });
   }
   await prisma.user.upsert({
-    where: { username: "rider1" },
+    where: { loginPhone: "9876500001" },
     update: {},
     create: {
-      username: "rider1",
-      passwordHash: await hash("Rider@123"),
+      loginPhone: "9876500001",
       role: "rider",
       linkedId: rider.id,
       status: "active",
@@ -58,8 +51,8 @@ async function main() {
   });
 
   const customerSeeds = [
-    { name: "Suresh Traders", phone: "9876500002", address: "Main Bazaar Road", villageArea: "Kanchipuram", username: "customer1", serialNumber: "KANCHIPURAM01" },
-    { name: "Lakshmi Silk House", phone: "9876500003", address: "Temple Street", villageArea: "Arni", username: "customer2", serialNumber: "ARNI01" },
+    { name: "Suresh Traders", phone: "9876500002", address: "Main Bazaar Road", villageArea: "Kanchipuram", loginPhone: "9876500002", serialNumber: "KANCHIPURAM01" },
+    { name: "Lakshmi Silk House", phone: "9876500003", address: "Temple Street", villageArea: "Arni", loginPhone: "9876500003", serialNumber: "ARNI01" },
   ];
 
   const customers = [];
@@ -84,11 +77,10 @@ async function main() {
       });
     }
     await prisma.user.upsert({
-      where: { username: seed.username },
+      where: { loginPhone: seed.loginPhone },
       update: {},
       create: {
-        username: seed.username,
-        passwordHash: await hash("Customer@123"),
+        loginPhone: seed.loginPhone,
         role: "customer",
         linkedId: customer.id,
         status: "active",
@@ -154,11 +146,11 @@ async function main() {
     });
   }
 
-  console.log("Seed complete. Login credentials:");
-  console.log("  admin     / Admin@123");
-  console.log("  rider1    / Rider@123");
-  console.log("  customer1 / Customer@123");
-  console.log("  customer2 / Customer@123");
+  console.log("Seed complete. Login phone numbers:");
+  console.log("  admin     / 9999900000");
+  console.log("  rider1    / 9876500001");
+  console.log("  customer1 / 9876500002");
+  console.log("  customer2 / 9876500003");
 }
 
 main()

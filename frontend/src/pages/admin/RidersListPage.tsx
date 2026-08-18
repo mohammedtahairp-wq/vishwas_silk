@@ -14,10 +14,8 @@ export function RidersListPage() {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [villageArea, setVillageArea] = useState("");
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [credentials, setCredentials] = useState<{ name: string; username: string; password: string } | null>(null);
+  const [loginPhone, setLoginPhone] = useState("");
+  const [createdInfo, setCreatedInfo] = useState<{ name: string; loginPhone: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const [editing, setEditing] = useState<Rider | null>(null);
@@ -39,19 +37,14 @@ export function RidersListPage() {
   async function handleCreate(e: FormEvent) {
     e.preventDefault();
     setError(null);
-    if (password !== confirmPassword) {
-      setError("Passwords do not match.");
-      return;
-    }
+    setCreatedInfo(null);
     try {
-      const result = await adminApi.createRider({ name, phone, villageArea: villageArea || undefined, username, password });
-      setCredentials({ name, username: result.username, password });
+      const result = await adminApi.createRider({ name, phone, villageArea: villageArea || undefined, loginPhone });
+      setCreatedInfo({ name, loginPhone: result.loginPhone });
       setName("");
       setPhone("");
       setVillageArea("");
-      setUsername("");
-      setPassword("");
-      setConfirmPassword("");
+      setLoginPhone("");
       await load();
     } catch (err) {
       setError(apiErrorMessage(err, "Could not create rider - check the fields and try again"));
@@ -87,22 +80,15 @@ export function RidersListPage() {
             <CitySelect cities={cities} value={villageArea} onChange={setVillageArea} />
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Username</label>
-            <input className="border border-gray-300 rounded px-2 py-1.5" value={username} onChange={(e) => setUsername(e.target.value)} minLength={3} pattern="[a-zA-Z0-9._-]+" autoComplete="off" required />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Temporary password</label>
-            <input type="password" className="border border-gray-300 rounded px-2 py-1.5" value={password} onChange={(e) => setPassword(e.target.value)} minLength={8} autoComplete="new-password" required />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Confirm password</label>
-            <input type="password" className="border border-gray-300 rounded px-2 py-1.5" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} minLength={8} autoComplete="new-password" required />
+            <label className="block text-xs font-medium text-gray-600 mb-1">Login Phone</label>
+            <input className="border border-gray-300 rounded px-2 py-1.5" value={loginPhone} onChange={(e) => setLoginPhone(e.target.value)} required />
           </div>
           <button type="submit" className="bg-emerald-600 hover:bg-emerald-700 text-white rounded px-4 py-1.5 font-medium">
             Add rider
           </button>
         </form>
         {error && <p className="text-sm text-red-600 mt-2">{error}</p>}
+        {createdInfo && <p className="text-sm text-green-600 mt-2">Rider "{createdInfo.name}" created with login phone: {createdInfo.loginPhone}</p>}
       </div>
 
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-x-auto">
@@ -165,23 +151,6 @@ export function RidersListPage() {
             await load();
           }}
         />
-      )}
-
-      {credentials && (
-        <Modal title="Rider login created" onClose={() => setCredentials(null)}>
-          <div className="space-y-4">
-            <p className="text-sm text-gray-600">Share these details securely with <strong>{credentials.name}</strong>. The password cannot be viewed again after closing this window.</p>
-            <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-sm">
-              <p><span className="inline-block w-24 text-gray-500">Login URL</span><strong>{window.location.origin}/login</strong></p>
-              <p className="mt-2"><span className="inline-block w-24 text-gray-500">Username</span><strong>{credentials.username}</strong></p>
-              <p className="mt-2"><span className="inline-block w-24 text-gray-500">Password</span><strong>{credentials.password}</strong></p>
-            </div>
-            <div className="flex justify-end gap-2">
-              <button type="button" onClick={() => navigator.clipboard.writeText(`VISHWAS SILK rider login\nURL: ${window.location.origin}/login\nUsername: ${credentials.username}\nPassword: ${credentials.password}`)} className="rounded border border-emerald-300 px-4 py-2 text-sm font-medium text-emerald-700 hover:bg-emerald-50">Copy details</button>
-              <button type="button" onClick={() => setCredentials(null)} className="rounded bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700">Done</button>
-            </div>
-          </div>
-        </Modal>
       )}
     </div>
   );

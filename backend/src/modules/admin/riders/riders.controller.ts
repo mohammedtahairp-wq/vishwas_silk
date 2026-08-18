@@ -6,8 +6,7 @@ const createSchema = z.object({
   name: z.string().min(1),
   phone: z.string().min(6),
   villageArea: z.string().min(1).optional(),
-  username: z.string().min(3).max(50).regex(/^[a-zA-Z0-9._-]+$/, "Username may only contain letters, numbers, dots, underscores and hyphens"),
-  password: z.string().min(8, "Password must be at least 8 characters"),
+  loginPhone: z.string().min(6, "Login phone must be at least 6 characters"),
 });
 
 const updateSchema = z.object({

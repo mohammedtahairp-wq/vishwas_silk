@@ -1,6 +1,5 @@
 import { prisma } from "../../../lib/prisma";
 import { BadRequestError, ConflictError, ForbiddenError, NotFoundError } from "../../../lib/errors";
-import bcrypt from "bcrypt";
 
 interface ProductPriceInput {
   productId: string;
@@ -14,8 +13,7 @@ interface CreateCustomerInput {
   address?: string;
   villageArea?: string;
   createdById: string;
-  username?: string;
-  password?: string;
+  loginPhone?: string;
   products?: ProductPriceInput[];
 }
 
@@ -35,9 +33,8 @@ interface ListCustomersFilter {
   search?: string;
 }
 
-interface SetCustomerLoginInput {
-  username?: string;
-  password?: string;
+interface SetCustomerPhoneInput {
+  loginPhone: string;
 }
 
 async function generateSerialNumber(city?: string | null): Promise<string> {
@@ -53,11 +50,11 @@ export async function createCustomer(input: CreateCustomerInput) {
   const serialNumber = await generateSerialNumber(input.villageArea);
   const today = new Date().toISOString().slice(0, 10);
 
-  let username: string | undefined;
-  if (input.username && input.password) {
-    username = input.username.trim().toLowerCase();
-    const existingUser = await prisma.user.findUnique({ where: { username } });
-    if (existingUser) throw new ConflictError("That username is already in use");
+  let loginPhone: string | undefined;
+  if (input.loginPhone) {
+    loginPhone = input.loginPhone.trim();
+    const existingUser = await prisma.user.findUnique({ where: { loginPhone } });
+    if (existingUser) throw new ConflictError("That phone number is already in use for login");
   }
 
   return prisma.$transaction(async (tx) => {
@@ -84,14 +81,13 @@ export async function createCustomer(input: CreateCustomerInput) {
       });
     }
 
-    if (username && input.password) {
-      const passwordHash = await bcrypt.hash(input.password, 12);
+    if (loginPhone) {
       await tx.user.create({
-        data: { username, passwordHash, role: "customer", linkedId: customer.id },
+        data: { loginPhone, role: "customer", linkedId: customer.id },
       });
     }
 
-    return { customer, username };
+    return { customer, loginPhone: loginPhone ?? null };
   });
 }
 
@@ -127,9 +123,9 @@ export async function getCustomerById(id: string) {
   }
   const user = await prisma.user.findFirst({
     where: { linkedId: id, role: "customer" },
-    select: { id: true },
+    select: { id: true, loginPhone: true },
   });
-  return { ...customer, hasLogin: Boolean(user) };
+  return { ...customer, hasLogin: Boolean(user), loginPhone: user?.loginPhone ?? null };
 }
 
 async function customerLoginSet(customerIds: string[]): Promise<Set<string>> {
@@ -173,47 +169,35 @@ export async function updateCustomer(id: string, input: UpdateCustomerInput) {
   return customer;
 }
 
-export async function setCustomerLogin(id: string, input: SetCustomerLoginInput) {
+export async function setCustomerPhone(id: string, input: SetCustomerPhoneInput) {
   await getCustomerById(id);
 
-  const username = input.username?.trim().toLowerCase();
-  const password = input.password;
-  if (!username && !password) {
-    throw new BadRequestError("Provide a username, a password, or both");
-  }
+  const loginPhone = input.loginPhone.trim();
 
   const existingUser = await prisma.user.findFirst({
     where: { linkedId: id, role: "customer" },
   });
 
   if (!existingUser) {
-    if (!username || !password) {
-      throw new BadRequestError("Creating a login requires both a username and a password");
-    }
-    await assertUsernameFree(username);
-    const passwordHash = await bcrypt.hash(password, 12);
+    await assertPhoneFree(loginPhone);
     const user = await prisma.user.create({
-      data: { username, passwordHash, role: "customer", linkedId: id },
+      data: { loginPhone, role: "customer", linkedId: id },
     });
-    return { username: user.username, created: true };
+    return { loginPhone: user.loginPhone, created: true };
   }
 
-  const data: { username?: string; passwordHash?: string } = {};
-  if (username && username !== existingUser.username) {
-    await assertUsernameFree(username, existingUser.id);
-    data.username = username;
+  if (loginPhone !== existingUser.loginPhone) {
+    await assertPhoneFree(loginPhone, existingUser.id);
   }
-  if (password) {
-    data.passwordHash = await bcrypt.hash(password, 12);
-  }
-  await prisma.user.update({ where: { id: existingUser.id }, data });
-  return { username: data.username ?? existingUser.username, created: false };
+
+  await prisma.user.update({ where: { id: existingUser.id }, data: { loginPhone } });
+  return { loginPhone, created: false };
 }
 
-async function assertUsernameFree(username: string, excludeId?: string) {
-  const existing = await prisma.user.findUnique({ where: { username } });
+async function assertPhoneFree(loginPhone: string, excludeId?: string) {
+  const existing = await prisma.user.findUnique({ where: { loginPhone } });
   if (existing && existing.id !== excludeId) {
-    throw new ConflictError("That username is already in use");
+    throw new ConflictError("That phone number is already in use for login");
   }
 }
 
@@ -228,8 +212,8 @@ export async function deleteCustomer(id: string) {
       "Cannot delete a customer with recorded pickups or settlements. Deactivate the customer instead."
     );
   }
-  // No pickups/transactions: safe to remove, but clear any price rows first.
   await prisma.customerProductPrice.deleteMany({ where: { customerId: id } });
+  await prisma.user.deleteMany({ where: { linkedId: id, role: "customer" } });
   await prisma.customer.delete({ where: { id } });
 }
 

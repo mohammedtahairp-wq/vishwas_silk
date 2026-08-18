@@ -9,7 +9,7 @@ export interface Rider {
 
 export interface CreateRiderResult {
   rider: Rider;
-  username: string;
+  loginPhone: string;
 }
 
 export interface Customer {
@@ -59,7 +59,7 @@ export interface CustomerProduct {
 
 export interface CreateCustomerResult {
   customer: Customer;
-  username: string | null;
+  loginPhone: string | null;
 }
 
 export interface Pickup {

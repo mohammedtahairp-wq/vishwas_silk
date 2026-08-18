@@ -9,7 +9,7 @@ export const adminApi = {
     apiClient.put<City>(`/admin/cities/${id}`, data).then((r) => r.data),
   deleteCity: (id: string) => apiClient.delete(`/admin/cities/${id}`).then((r) => r.data),
 
-  createCustomer: (data: { name: string; phone: string; address?: string; villageArea?: string; username?: string; password?: string; products?: { productId: string; pricePerKg: number; effectiveFrom?: string }[] }) =>
+  createCustomer: (data: { name: string; phone: string; address?: string; villageArea?: string; loginPhone?: string; products?: { productId: string; pricePerKg: number; effectiveFrom?: string }[] }) =>
     apiClient.post<CreateCustomerResult>("/admin/customers", data).then((r) => r.data),
   listCustomers: (params?: { rider_id?: string; status?: string }) =>
     apiClient.get<Customer[]>("/admin/customers", { params }).then((r) => r.data),
@@ -21,10 +21,10 @@ export const adminApi = {
     apiClient.put<Customer>(`/admin/customers/${id}/assign-rider`, { rider_id: riderId }).then((r) => r.data),
   setCustomerStatus: (id: string, status: "active" | "inactive") =>
     apiClient.put<Customer>(`/admin/customers/${id}/status`, { status }).then((r) => r.data),
-  setCustomerLogin: (id: string, data: { username?: string; password?: string }) =>
-    apiClient.put<{ username: string; created: boolean }>(`/admin/customers/${id}/login`, data).then((r) => r.data),
+  setCustomerLogin: (id: string, data: { loginPhone: string }) =>
+    apiClient.put<{ loginPhone: string; created: boolean }>(`/admin/customers/${id}/login`, data).then((r) => r.data),
 
-  createRider: (data: { name: string; phone: string; villageArea?: string; username: string; password: string }) =>
+  createRider: (data: { name: string; phone: string; villageArea?: string; loginPhone: string }) =>
     apiClient.post<CreateRiderResult>("/admin/riders", data).then((r) => r.data),
   listRiders: () => apiClient.get<Rider[]>("/admin/riders").then((r) => r.data),
   getRider: (id: string) => apiClient.get<Rider>(`/admin/riders/${id}`).then((r) => r.data),

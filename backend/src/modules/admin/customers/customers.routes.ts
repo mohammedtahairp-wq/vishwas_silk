@@ -6,7 +6,7 @@ import {
   deleteCustomerHandler,
   getCustomerHandler,
   listCustomersHandler,
-  setCustomerLoginHandler,
+  setCustomerPhoneHandler,
   setStatusHandler,
   updateCustomerHandler,
 } from "./customers.controller";
@@ -19,5 +19,5 @@ customersRouter.get("/:id", asyncHandler(getCustomerHandler));
 customersRouter.put("/:id", asyncHandler(updateCustomerHandler));
 customersRouter.delete("/:id", asyncHandler(deleteCustomerHandler));
 customersRouter.put("/:id/assign-rider", asyncHandler(assignRiderHandler));
-customersRouter.put("/:id/login", asyncHandler(setCustomerLoginHandler));
+customersRouter.put("/:id/login", asyncHandler(setCustomerPhoneHandler));
 customersRouter.put("/:id/status", asyncHandler(setStatusHandler));

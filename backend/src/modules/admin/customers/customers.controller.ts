@@ -13,8 +13,7 @@ const createSchema = z.object({
   phone: z.string().min(6),
   address: z.string().optional(),
   villageArea: z.string().optional(),
-  username: z.string().min(3).max(50).regex(/^[a-zA-Z0-9._-]+$/, "Username may only contain letters, numbers, dots, underscores and hyphens").optional(),
-  password: z.string().min(8, "Password must be at least 8 characters").optional(),
+  loginPhone: z.string().min(6, "Login phone must be at least 6 characters").optional(),
   products: z.array(productPriceSchema).optional(),
 });
 
@@ -29,12 +28,9 @@ const updateSchema = z.object({
   products: z.array(productPriceSchema).optional(),
 });
 
-const loginSchema = z
-  .object({
-    username: z.string().trim().min(3).max(50).regex(/^[a-zA-Z0-9._-]+$/, "Username may only contain letters, numbers, dots, underscores and hyphens").optional(),
-    password: z.string().min(8, "Password must be at least 8 characters").optional(),
-  })
-  .refine((data) => data.username || data.password, { message: "Provide a username, a password, or both" });
+const phoneSchema = z.object({
+  loginPhone: z.string().min(6, "Login phone must be at least 6 characters"),
+});
 
 const assignRiderSchema = z.object({
   rider_id: z.string().uuid().nullable(),
@@ -73,9 +69,9 @@ export async function updateCustomerHandler(req: Request, res: Response) {
   res.json(customer);
 }
 
-export async function setCustomerLoginHandler(req: Request, res: Response) {
-  const body = loginSchema.parse(req.body);
-  const result = await customersService.setCustomerLogin(req.params.id, body);
+export async function setCustomerPhoneHandler(req: Request, res: Response) {
+  const body = phoneSchema.parse(req.body);
+  const result = await customersService.setCustomerPhone(req.params.id, body);
   res.json(result);
 }
 

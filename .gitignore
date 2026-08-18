@@ -17,3 +17,5 @@ backend/prisma/*.xlsx
 *.apk
 *.tsbuildinfo
 frontend/android/
+backend/serviceAccountKey.json
+backend/vishwas-silk-*.json

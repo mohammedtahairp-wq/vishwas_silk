@@ -1,13 +1,11 @@
 import { prisma } from "../../../lib/prisma";
 import { ConflictError, NotFoundError } from "../../../lib/errors";
-import bcrypt from "bcrypt";
 
 interface CreateRiderInput {
   name: string;
   phone: string;
   villageArea?: string;
-  username: string;
-  password: string;
+  loginPhone: string;
 }
 
 interface UpdateRiderInput {
@@ -18,19 +16,18 @@ interface UpdateRiderInput {
 }
 
 export async function createRider(input: CreateRiderInput) {
-  const passwordHash = await bcrypt.hash(input.password, 12);
-  const username = input.username.trim().toLowerCase();
-  const existingUser = await prisma.user.findUnique({ where: { username } });
-  if (existingUser) throw new ConflictError("That username is already in use");
+  const loginPhone = input.loginPhone.trim();
+  const existingUser = await prisma.user.findUnique({ where: { loginPhone } });
+  if (existingUser) throw new ConflictError("That phone number is already in use for login");
 
   return prisma.$transaction(async (tx) => {
     const rider = await tx.rider.create({
       data: { name: input.name, phone: input.phone, villageArea: input.villageArea },
     });
     await tx.user.create({
-      data: { username, passwordHash, role: "rider", linkedId: rider.id },
+      data: { loginPhone, role: "rider", linkedId: rider.id },
     });
-    return { rider, username };
+    return { rider, loginPhone };
   });
 }
 

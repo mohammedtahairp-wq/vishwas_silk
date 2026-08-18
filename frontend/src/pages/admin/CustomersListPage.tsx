@@ -31,8 +31,7 @@ export function CustomersListPage() {
   const [address, setAddress] = useState("");
   const [villageArea, setVillageArea] = useState("");
   const [assignedRiderId, setAssignedRiderId] = useState("");
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
+  const [loginPhone, setLoginPhone] = useState("");
   const [productPrices, setProductPrices] = useState<{ productId: string; pricePerKg: string }[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [createdInfo, setCreatedInfo] = useState<string | null>(null);
@@ -106,21 +105,19 @@ export function CustomersListPage() {
         phone,
         address: address || undefined,
         villageArea: villageArea || undefined,
-        username: username || undefined,
-        password: password || undefined,
+        loginPhone: loginPhone || undefined,
         products: validProducts.length > 0
           ? validProducts.map((p) => ({ productId: p.productId, pricePerKg: Number(p.pricePerKg) }))
           : undefined,
       });
       if (assignedRiderId) await adminApi.assignRider(result.customer.id, assignedRiderId);
-      setCreatedInfo(`"${result.customer.name}" created${result.username ? ` — username: ${result.username}` : ""}`);
+      setCreatedInfo(`"${result.customer.name}" created${result.loginPhone ? ` — login phone: ${result.loginPhone}` : ""}`);
       setName("");
       setPhone("");
       setAddress("");
       setVillageArea("");
       setAssignedRiderId("");
-      setUsername("");
-      setPassword("");
+      setLoginPhone("");
       setProductPrices([]);
       await load();
     } catch (err) {
@@ -224,12 +221,8 @@ export function CustomersListPage() {
             </select>
           </div>
           <div className="md:col-span-1">
-            <label className="block text-xs font-medium text-gray-600 mb-1">Login username <span className="text-gray-400">(optional)</span></label>
-            <input className="w-full border border-gray-300 rounded px-2 py-1.5" value={username} onChange={(e) => setUsername(e.target.value)} />
-          </div>
-          <div className="md:col-span-1">
-            <label className="block text-xs font-medium text-gray-600 mb-1">Login password <span className="text-gray-400">(optional)</span></label>
-            <input type="password" className="w-full border border-gray-300 rounded px-2 py-1.5" value={password} onChange={(e) => setPassword(e.target.value)} />
+            <label className="block text-xs font-medium text-gray-600 mb-1">Login phone <span className="text-gray-400">(optional)</span></label>
+            <input className="w-full border border-gray-300 rounded px-2 py-1.5" value={loginPhone} onChange={(e) => setLoginPhone(e.target.value)} />
           </div>
           </div>
           <div className="border-t border-gray-100 pt-3">
@@ -300,14 +293,14 @@ export function CustomersListPage() {
             ) : (
               visibleCustomers.map((c) => (
                 <tr key={c.id} className="border-t border-gray-100 hover:bg-gray-50">
-                  <td className="px-4 py-2 font-mono font-semibold text-emerald-700">{c.serialNumber ?? "—"}</td>
+                  <td className="px-4 py-2 font-mono font-semibold text-emerald-700">{c.serialNumber ?? "\u2014"}</td>
                   <td className="px-4 py-2">
                     <Link to={`/admin/customers/${c.id}`} className="text-emerald-600 hover:underline">
                       {c.name}
                     </Link>
                   </td>
                   <td className="px-4 py-2">{c.phone}</td>
-                  <td className="px-4 py-2">{c.villageArea ?? "—"}</td>
+                  <td className="px-4 py-2">{c.villageArea ?? "\u2014"}</td>
                   <td className="px-4 py-2">
                     <select
                       aria-label={`Assigned rider for ${c.name}`}
@@ -358,14 +351,17 @@ function EditCustomerModal({ customer, cities, products, onClose, onSaved }: { c
   const [address, setAddress] = useState(customer.address);
   const [villageArea, setVillageArea] = useState(customer.villageArea ?? "");
   const [status, setStatus] = useState<Customer["status"]>(customer.status);
-  const [loginUsername, setLoginUsername] = useState("");
-  const [loginPassword, setLoginPassword] = useState("");
+  const [loginPhone, setLoginPhone] = useState("");
+  const [currentLoginPhone, setCurrentLoginPhone] = useState<string | null>(null);
   const [productPrices, setProductPrices] = useState<{ productId: string; pricePerKg: string }[]>([]);
   const [loadedPrices, setLoadedPrices] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
+    adminApi.getCustomer(customer.id).then((c) => {
+      setCurrentLoginPhone((c as unknown as { loginPhone?: string | null }).loginPhone ?? null);
+    }).catch(() => {});
     adminApi.priceHistory(customer.id).then((prices) => {
       const latest = new Map<string, { productId: string; pricePerKg: string }>();
       for (const p of prices) {
@@ -393,11 +389,8 @@ function EditCustomerModal({ customer, cities, products, onClose, onSaved }: { c
       if (status !== customer.status) {
         await adminApi.setCustomerStatus(customer.id, status);
       }
-      if (loginUsername.trim() || loginPassword) {
-        await adminApi.setCustomerLogin(customer.id, {
-          username: loginUsername.trim() || undefined,
-          password: loginPassword || undefined,
-        });
+      if (loginPhone.trim()) {
+        await adminApi.setCustomerLogin(customer.id, { loginPhone: loginPhone.trim() });
       }
       onSaved();
     } catch (err) {
@@ -437,31 +430,22 @@ function EditCustomerModal({ customer, cities, products, onClose, onSaved }: { c
         </Field>
         <div className="border-t border-gray-100 pt-3">
           <label className="text-xs font-semibold text-gray-700">
-            Login credentials{" "}
-            {customer.hasLogin ? (
-              <span className="font-normal text-emerald-600">(already created — fill to change)</span>
+            Login phone{" "}
+            {currentLoginPhone ? (
+              <span className="font-normal text-emerald-600">(current: {currentLoginPhone} — fill below to change)</span>
             ) : (
-              <span className="font-normal text-gray-400">(not created yet)</span>
+              <span className="font-normal text-gray-400">(not set yet)</span>
             )}
           </label>
-          {!customer.hasLogin && (
-            <p className="mb-2 text-xs text-gray-400">Create a username and password so this customer can log in.</p>
+          {!currentLoginPhone && (
+            <p className="mb-2 text-xs text-gray-400">Set a phone number so this customer can log in with OTP.</p>
           )}
-          <div className="grid grid-cols-2 gap-2">
-            <input
-              placeholder="Username"
-              className="w-full border border-gray-300 rounded px-2 py-1.5"
-              value={loginUsername}
-              onChange={(e) => setLoginUsername(e.target.value)}
-            />
-            <input
-              type="password"
-              placeholder="Password (min 8 characters)"
-              className="w-full border border-gray-300 rounded px-2 py-1.5"
-              value={loginPassword}
-              onChange={(e) => setLoginPassword(e.target.value)}
-            />
-          </div>
+          <input
+            placeholder="Login phone number"
+            className="w-full border border-gray-300 rounded px-2 py-1.5 mt-1"
+            value={loginPhone}
+            onChange={(e) => setLoginPhone(e.target.value)}
+          />
         </div>
         <div className="border-t border-gray-100 pt-3">
           <div className="flex items-center justify-between mb-2">

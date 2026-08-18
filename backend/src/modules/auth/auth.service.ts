@@ -1,23 +1,33 @@
-import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { prisma } from "../../lib/prisma";
 import { env } from "../../config/env";
-import { UnauthorizedError } from "../../lib/errors";
+import { UnauthorizedError, NotFoundError } from "../../lib/errors";
+import { firebaseAuth } from "../../config/firebase";
 
-export async function login(username: string, password: string) {
-  const user = await prisma.user.findUnique({ where: { username } });
+function normalizePhone(firebasePhone: string): string {
+  return firebasePhone.replace(/^\+91/, "").replace(/^\+/, "");
+}
+
+export async function verifyFirebaseAndLogin(idToken: string) {
+  let decoded;
+  try {
+    decoded = await firebaseAuth.verifyIdToken(idToken);
+  } catch {
+    throw new UnauthorizedError("Invalid or expired verification code");
+  }
+
+  const firebasePhone = decoded.phone_number;
+  if (!firebasePhone) {
+    throw new UnauthorizedError("No phone number associated with this account");
+  }
+
+  const phone = normalizePhone(firebasePhone);
+
+  const user = await prisma.user.findUnique({ where: { loginPhone: phone } });
   if (!user || user.status !== "active") {
-    throw new UnauthorizedError("Invalid username or password");
+    throw new NotFoundError("User not found");
   }
 
-  const passwordMatches = await bcrypt.compare(password, user.passwordHash);
-  if (!passwordMatches) {
-    throw new UnauthorizedError("Invalid username or password");
-  }
-
-  // Non-expiring session token: the client persists it in localStorage, so a
-  // login survives app/browser restarts until the user logs out manually (or
-  // uninstalls the app, which clears storage). Logout is client-side.
   const token = jwt.sign(
     { sub: user.id, role: user.role, linkedId: user.linkedId },
     env.jwtSecret
