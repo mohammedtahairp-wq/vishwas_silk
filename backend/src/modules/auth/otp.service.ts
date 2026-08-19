@@ -18,19 +18,20 @@ function cleanExpired() {
 export async function sendOtp(phone: string) {
   cleanExpired();
 
-  const res = await fetch("https://control.msg91.com/api/v5/otp", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      mobile: `91${phone}`,
-      authkey: env.msg91AuthToken,
-      template_id: env.msg91TemplateId,
-      otp_length: 4,
-      otp_expiry: 5,
-    }),
+  const params = new URLSearchParams({
+    template_id: env.msg91TemplateId,
+    mobile: `91${phone}`,
+    authkey: env.msg91AuthToken,
+    otp_length: "4",
+    otp_expiry: "5",
   });
 
-  const data = (await res.json()) as { type: string; message?: string };
+  const res = await fetch(`https://control.msg91.com/api/v5/otp?${params}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+  });
+
+  const data = (await res.json()) as { type: string; message?: string; request_id?: string };
   console.log("[MSG91 Send]", JSON.stringify(data));
 
   if (data.type !== "success") {
@@ -51,14 +52,15 @@ export async function verifyOtp(phone: string, otp: string) {
     throw new UnauthorizedError("OTP has expired. Please request a new one.");
   }
 
-  const res = await fetch("https://control.msg91.com/api/v5/otp/verify", {
+  const params = new URLSearchParams({
+    mobile: `91${phone}`,
+    otp,
+    authkey: env.msg91AuthToken,
+  });
+
+  const res = await fetch(`https://control.msg91.com/api/v5/otp/verify?${params}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      mobile: `91${phone}`,
-      otp: Number(otp),
-      authkey: env.msg91AuthToken,
-    }),
   });
 
   const data = (await res.json()) as { type: string; message?: string };
