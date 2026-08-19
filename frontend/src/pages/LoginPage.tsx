@@ -1,17 +1,9 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState } from "react";
 import type { FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useAuth } from "../auth/AuthContext";
-
-declare global {
-  interface Window {
-    initSendOTP: (config: Record<string, unknown>) => void;
-    sendOtp: (id: string, success?: (data: unknown) => void, error?: (err: unknown) => void) => void;
-    verifyOtp: (otp: number, success?: (data: unknown) => void, error?: (err: unknown) => void, reqId?: string) => void;
-    retryOtp: (channel: string, success?: (data: unknown) => void, error?: (err: unknown) => void) => void;
-  }
-}
+import { apiClient, apiErrorMessage } from "../api/client";
 
 type Step = "phone" | "otp";
 
@@ -24,66 +16,6 @@ export function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [resendTimer, setResendTimer] = useState(0);
-  const reqIdRef = useRef<string | null>(null);
-  const widgetReady = useRef(false);
-
-  const onWidgetSuccess = useCallback(
-    (data: unknown) => {
-      const response = data as { token?: string; message?: string };
-
-      if (step === "phone") {
-        setSubmitting(false);
-        setStep("otp");
-        startResendTimer();
-      } else if (step === "otp" && response.token) {
-        loginWithOtp(phone, response.token)
-          .then((role) => navigate(`/${role}`, { replace: true }))
-          .catch((err: Error) => {
-            setError(err.message || "Login failed. Please try again.");
-            setSubmitting(false);
-          });
-      }
-    },
-    [step, phone, loginWithOtp, navigate]
-  );
-
-  const onWidgetError = useCallback(
-    (err: unknown) => {
-      const message = (err as { message?: string }).message || "Something went wrong. Please try again.";
-      setError(message);
-      setSubmitting(false);
-    },
-    []
-  );
-
-  useEffect(() => {
-    if (widgetReady.current) return;
-
-    const script = document.createElement("script");
-    script.src = "https://verify.msg91.com/otp-provider.js";
-    script.onload = () => {
-      window.initSendOTP({
-        widgetId: import.meta.env.VITE_MSG91_WIDGET_ID,
-        tokenAuth: import.meta.env.VITE_MSG91_AUTH_TOKEN,
-        exposeMethods: true,
-        success: onWidgetSuccess,
-        failure: onWidgetError,
-      });
-      widgetReady.current = true;
-    };
-    document.head.appendChild(script);
-  }, []);
-
-  useEffect(() => {
-    if (!widgetReady.current) return;
-    window.initSendOTP({
-      widgetId: import.meta.env.VITE_MSG91_WIDGET_ID,
-      tokenAuth: import.meta.env.VITE_MSG91_AUTH_TOKEN,
-      exposeMethods: true,
-      success: onWidgetSuccess,
-      failure: onWidgetError,
-    });
-  }, [onWidgetSuccess, onWidgetError]);
 
   function startResendTimer() {
     setResendTimer(30);
@@ -102,76 +34,42 @@ export function LoginPage() {
     e.preventDefault();
     setError(null);
     setSubmitting(true);
-
-    if (!widgetReady.current) {
-      setError("OTP service is loading. Please try again.");
+    try {
+      await apiClient.post("/auth/send-otp", { phone: phone.trim() });
+      startResendTimer();
+      setStep("otp");
+    } catch (err) {
+      setError(apiErrorMessage(err, "Failed to send OTP. Please try again."));
+    } finally {
       setSubmitting(false);
-      return;
     }
+  }
 
-    window.sendOtp(
-      `91${phone.trim()}`,
-      (data: unknown) => {
-        const response = data as { request_id?: string; reqId?: string };
-        reqIdRef.current = response.reqId || response.request_id || null;
-        setSubmitting(false);
-        setStep("otp");
-        startResendTimer();
-      },
-      (err: unknown) => {
-        const message = (err as { message?: string }).message || "Failed to send OTP. Please try again.";
-        setError(message);
-        setSubmitting(false);
-      }
-    );
+  async function handleResendOtp() {
+    setError(null);
+    setSubmitting(true);
+    try {
+      await apiClient.post("/auth/send-otp", { phone: phone.trim() });
+      startResendTimer();
+    } catch (err) {
+      setError(apiErrorMessage(err, "Failed to resend OTP. Please try again."));
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   async function handleVerifyOtp(e: FormEvent) {
     e.preventDefault();
     setError(null);
     setSubmitting(true);
-
-    window.verifyOtp(
-      Number(otp.trim()),
-      (data: unknown) => {
-        console.log("[MSG91 verifyOtp] success:", data);
-        const response = data as { token?: string; accessToken?: string; request_id?: string };
-        const accessToken = response.token || response.accessToken;
-        if (accessToken) {
-          loginWithOtp(phone, accessToken)
-            .then((role) => navigate(`/${role}`, { replace: true }))
-            .catch((err: Error) => {
-              setError(err.message || "Login failed. Please try again.");
-              setSubmitting(false);
-            });
-        } else {
-          setError("Verification succeeded but no token received. Please try again.");
-          setSubmitting(false);
-        }
-      },
-      (err: unknown) => {
-        const message = (err as { message?: string }).message || "Invalid OTP. Please try again.";
-        setError(message);
-        setSubmitting(false);
-      },
-      reqIdRef.current || undefined
-    );
-  }
-
-  async function handleResendOtp() {
-    setError(null);
-    setSubmitting(true);
-
-    window.sendOtp(
-      `91${phone.trim()}`,
-      () => {},
-      (err: unknown) => {
-        const message = (err as { message?: string }).message || "Failed to resend OTP. Please try again.";
-        setError(message);
-        setSubmitting(false);
-      }
-    );
-    startResendTimer();
+    try {
+      const role = await loginWithOtp(phone.trim(), otp);
+      navigate(`/${role}`, { replace: true });
+    } catch (err) {
+      setError(apiErrorMessage(err, "Invalid OTP. Please try again."));
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   function handleBack() {
@@ -287,12 +185,10 @@ export function LoginPage() {
                   style={{ background: "rgba(255,255,255,0.7)" }}
                   value={otp}
                   onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
-                  placeholder="Enter OTP code"
+                  placeholder="Enter OTP"
                   required
                   autoFocus
                   inputMode="numeric"
-                  pattern="[0-9]+"
-                  maxLength={6}
                 />
               </motion.div>
 

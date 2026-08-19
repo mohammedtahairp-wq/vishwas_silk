@@ -1,15 +1,15 @@
 import jwt from "jsonwebtoken";
 import { prisma } from "../../lib/prisma";
 import { env } from "../../config/env";
-import { UnauthorizedError, NotFoundError } from "../../lib/errors";
-import { verifyMsg91Token } from "./otp.service";
+import { NotFoundError } from "../../lib/errors";
+import { verifyOtp } from "./otp.service";
 
 function normalizePhone(phone: string): string {
   return phone.replace(/^\+91/, "").replace(/^\+/, "");
 }
 
-export async function verifyOtpAndLogin(phone: string, token: string) {
-  await verifyMsg91Token(token);
+export async function verifyOtpAndLogin(phone: string, otp: string) {
+  await verifyOtp(phone, otp);
 
   const normalizedPhone = normalizePhone(phone);
 
@@ -18,10 +18,10 @@ export async function verifyOtpAndLogin(phone: string, token: string) {
     throw new NotFoundError("User not found");
   }
 
-  const jwtToken = jwt.sign(
+  const token = jwt.sign(
     { sub: user.id, role: user.role, linkedId: user.linkedId },
     env.jwtSecret
   );
 
-  return { token: jwtToken, role: user.role };
+  return { token, role: user.role };
 }
