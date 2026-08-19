@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import type { FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useAuth } from "../auth/AuthContext";
@@ -6,67 +7,154 @@ import { apiErrorMessage } from "../api/client";
 
 declare global {
   interface Window {
-    initSendOTP?: (config: Record<string, unknown>) => void;
+    sendOtp?: (
+      identifier: string,
+      successCb: (data: Record<string, unknown>) => void,
+      failureCb: (error: Record<string, unknown>) => void
+    ) => void;
+    retryOtp?: (
+      identifier: string,
+      successCb: (data: Record<string, unknown>) => void,
+      failureCb: (error: Record<string, unknown>) => void
+    ) => void;
+    verifyOtp?: (
+      otp: string,
+      successCb: (data: Record<string, unknown>) => void,
+      failureCb: (error: Record<string, unknown>) => void
+    ) => void;
   }
 }
+
+type Step = "phone" | "otp";
 
 export function LoginPage() {
   const { loginWithOtp } = useAuth();
   const navigate = useNavigate();
+  const [step, setStep] = useState<Step>("phone");
   const [phone, setPhone] = useState("");
+  const [otp, setOtp] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const widgetContainerRef = useRef<HTMLDivElement>(null);
-  const widgetInitialized = useRef(false);
+  const [resendTimer, setResendTimer] = useState(0);
+  const widgetLoaded = useRef(false);
 
   useEffect(() => {
+    if (document.getElementById("msg91-widget-script")) {
+      widgetLoaded.current = true;
+      return;
+    }
+
     const script = document.createElement("script");
+    script.id = "msg91-widget-script";
     script.src = "https://verify.msg91.com/otp-provider.js";
     script.async = true;
-    document.body.appendChild(script);
-    return () => {
-      document.body.removeChild(script);
+    script.onload = () => {
+      if (window.sendOtp) {
+        widgetLoaded.current = true;
+      }
     };
+    document.body.appendChild(script);
   }, []);
 
-  function handleSendOtp() {
-    setError(null);
-    if (phone.length !== 10) {
-      setError("Please enter a valid 10-digit phone number.");
-      return;
-    }
-    setSubmitting(true);
-    widgetInitialized.current = false;
-    initWidget();
+  function startResendTimer() {
+    setResendTimer(30);
+    const interval = setInterval(() => {
+      setResendTimer((prev) => {
+        if (prev <= 1) {
+          clearInterval(interval);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
   }
 
-  function initWidget() {
-    if (!window.initSendOTP || !widgetContainerRef.current) {
-      setTimeout(initWidget, 200);
+  async function handleSendOtp(e: FormEvent) {
+    e.preventDefault();
+    setError(null);
+
+    if (!widgetLoaded.current || !window.sendOtp) {
+      setError("OTP service is loading. Please wait a moment and try again.");
       return;
     }
 
-    if (widgetInitialized.current) return;
-    widgetInitialized.current = true;
+    setSubmitting(true);
 
-    widgetContainerRef.current.innerHTML = "";
-
-    const configuration = {
+    const config = {
       widgetId: "366873666f70363331363236",
       tokenAuth: "562052TL8m0XmAw6a854b16P1",
-      identifier: `91${phone}`,
-      containerId: "otp-widget",
-      success: async (data: Record<string, unknown>) => {
-        setSubmitting(true);
-        setError(null);
+      exposeMethods: true,
+    };
+
+    window.initSendOTP?.(config);
+
+    await new Promise((r) => setTimeout(r, 500));
+
+    if (!window.sendOtp) {
+      setError("OTP service failed to load. Please refresh and try again.");
+      setSubmitting(false);
+      return;
+    }
+
+    window.sendOtp(
+      `91${phone}`,
+      () => {
+        startResendTimer();
+        setStep("otp");
+        setSubmitting(false);
+      },
+      (err) => {
+        setError(
+          (err.message as string) ||
+            "Failed to send OTP. Please try again."
+        );
+        setSubmitting(false);
+      }
+    );
+  }
+
+  async function handleResendOtp() {
+    setError(null);
+    setSubmitting(true);
+
+    window.retryOtp?.(
+      `91${phone}`,
+      () => {
+        startResendTimer();
+        setSubmitting(false);
+      },
+      (err) => {
+        setError(
+          (err.message as string) ||
+            "Failed to resend OTP. Please try again."
+        );
+        setSubmitting(false);
+      }
+    );
+  }
+
+  async function handleVerifyOtp(e: FormEvent) {
+    e.preventDefault();
+    setError(null);
+    setSubmitting(true);
+
+    if (!window.verifyOtp) {
+      setError("OTP service not ready. Please try again.");
+      setSubmitting(false);
+      return;
+    }
+
+    window.verifyOtp(
+      otp,
+      async (data) => {
         try {
           const widgetToken =
             (data.token as string) ||
-            (data.tokenAuth as string) ||
             (data.access_token as string) ||
+            (data.message as string) ||
             "";
           if (!widgetToken) {
-            setError("Verification succeeded but no token received. Please try again.");
+            setError("Verification succeeded but no token received.");
             setSubmitting(false);
             return;
           }
@@ -77,17 +165,20 @@ export function LoginPage() {
           setSubmitting(false);
         }
       },
-      failure: (err: Record<string, unknown>) => {
-        const msg =
+      (err) => {
+        setError(
           (err.message as string) ||
-          (err.error as string) ||
-          "OTP verification failed. Please try again.";
-        setError(msg);
+            "Invalid OTP. Please try again."
+        );
         setSubmitting(false);
-      },
-    };
+      }
+    );
+  }
 
-    window.initSendOTP(configuration);
+  function handleBack() {
+    setStep("phone");
+    setOtp("");
+    setError(null);
   }
 
   return (
@@ -161,79 +252,205 @@ export function LoginPage() {
               VISHWAS SILK
             </h1>
             <p className="text-sm text-gray-500 mt-1 font-medium">
-              {submitting
-                ? "Verifying OTP..."
-                : "Sign in with your phone number"}
+              {step === "phone"
+                ? "Sign in with your phone number"
+                : `Enter the OTP sent to +91${phone}`}
             </p>
           </motion.div>
 
-          <motion.div
-            initial={{ opacity: 0, x: -10 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.4 }}
-          >
-            <label className="block text-xs font-bold uppercase tracking-wider text-gray-400 mb-2">
-              Phone Number
-            </label>
-            <div className="flex">
-              <span
-                className="flex items-center px-3 border border-r-0 border-gray-200 rounded-l-xl text-sm font-medium text-gray-500"
-                style={{ background: "rgba(255,255,255,0.7)" }}
+          {step === "phone" ? (
+            <form onSubmit={handleSendOtp} className="space-y-5">
+              <motion.div
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.4 }}
               >
-                +91
-              </span>
-              <input
-                className="flex-1 border border-gray-200 rounded-r-xl px-4 py-3 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-emerald-200 focus:border-emerald-400 transition-all duration-200"
-                style={{ background: "rgba(255,255,255,0.7)" }}
-                value={phone}
-                onChange={(e) =>
-                  setPhone(e.target.value.replace(/\D/g, "").slice(0, 10))
-                }
-                placeholder="Enter 10-digit number"
-                required
-                autoFocus
-                inputMode="numeric"
-                pattern="[0-9]{10}"
-                disabled={submitting}
-              />
-            </div>
-          </motion.div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-gray-400 mb-2">
+                  Phone Number
+                </label>
+                <div className="flex">
+                  <span
+                    className="flex items-center px-3 border border-r-0 border-gray-200 rounded-l-xl text-sm font-medium text-gray-500"
+                    style={{ background: "rgba(255,255,255,0.7)" }}
+                  >
+                    +91
+                  </span>
+                  <input
+                    className="flex-1 border border-gray-200 rounded-r-xl px-4 py-3 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-emerald-200 focus:border-emerald-400 transition-all duration-200"
+                    style={{ background: "rgba(255,255,255,0.7)" }}
+                    value={phone}
+                    onChange={(e) =>
+                      setPhone(
+                        e.target.value.replace(/\D/g, "").slice(0, 10)
+                      )
+                    }
+                    placeholder="Enter 10-digit number"
+                    required
+                    autoFocus
+                    inputMode="numeric"
+                    pattern="[0-9]{10}"
+                  />
+                </div>
+              </motion.div>
 
-          {error && (
-            <motion.div
-              initial={{ opacity: 0, y: -5 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="mt-4 rounded-xl bg-gradient-to-r from-red-50 to-rose-50 border border-red-200 px-4 py-3 text-sm text-red-600 font-medium"
-            >
-              {error}
-            </motion.div>
-          )}
+              {error && (
+                <motion.div
+                  initial={{ opacity: 0, y: -5 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="rounded-xl bg-gradient-to-r from-red-50 to-rose-50 border border-red-200 px-4 py-3 text-sm text-red-600 font-medium"
+                >
+                  {error}
+                </motion.div>
+              )}
 
-          {submitting && (
-            <div
-              id="otp-widget"
-              ref={widgetContainerRef}
-              className="mt-4"
-            />
-          )}
+              <motion.button
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.5 }}
+                whileHover={{ scale: 1.01 }}
+                whileTap={{ scale: 0.98 }}
+                type="submit"
+                disabled={submitting || phone.length !== 10}
+                className="w-full text-white rounded-xl py-3 font-bold text-sm tracking-wide disabled:opacity-50 transition-all duration-200"
+                style={{
+                  background:
+                    "linear-gradient(135deg, #059669, #10b981)",
+                  boxShadow: "0 4px 16px rgba(5, 150, 105, 0.35)",
+                }}
+              >
+                {submitting ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <svg
+                      className="animate-spin w-4 h-4"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                    >
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                      />
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                      />
+                    </svg>
+                    Sending OTP...
+                  </span>
+                ) : (
+                  "Get OTP"
+                )}
+              </motion.button>
+            </form>
+          ) : (
+            <form onSubmit={handleVerifyOtp} className="space-y-5">
+              <motion.div
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.4 }}
+              >
+                <label className="block text-xs font-bold uppercase tracking-wider text-gray-400 mb-2">
+                  Verification Code
+                </label>
+                <input
+                  className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm font-medium text-center tracking-[0.5em] focus:outline-none focus:ring-2 focus:ring-emerald-200 focus:border-emerald-400 transition-all duration-200"
+                  style={{ background: "rgba(255,255,255,0.7)" }}
+                  value={otp}
+                  onChange={(e) =>
+                    setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))
+                  }
+                  placeholder="Enter OTP"
+                  required
+                  autoFocus
+                  inputMode="numeric"
+                />
+              </motion.div>
 
-          {!submitting && (
-            <motion.button
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.5 }}
-              whileHover={{ scale: 1.01 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={handleSendOtp}
-              disabled={phone.length !== 10}
-              className="mt-5 w-full text-white rounded-xl py-3 font-bold text-sm tracking-wide disabled:opacity-50 transition-all duration-200"
-              style={{
-                background: "linear-gradient(135deg, #059669, #10b981)",
-                boxShadow: "0 4px 16px rgba(5, 150, 105, 0.35)",
-              }}
-            >
-              Get OTP & Verify
-            </motion.button>
+              {error && (
+                <motion.div
+                  initial={{ opacity: 0, y: -5 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="rounded-xl bg-gradient-to-r from-red-50 to-rose-50 border border-red-200 px-4 py-3 text-sm text-red-600 font-medium"
+                >
+                  {error}
+                </motion.div>
+              )}
+
+              <div className="flex gap-3">
+                <motion.button
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.5 }}
+                  type="button"
+                  onClick={handleBack}
+                  className="flex-1 rounded-xl py-3 font-bold text-sm tracking-wide border border-gray-200 text-gray-600 hover:bg-gray-50 transition-all duration-200"
+                >
+                  Change Number
+                </motion.button>
+                <motion.button
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.5 }}
+                  whileHover={{ scale: 1.01 }}
+                  whileTap={{ scale: 0.98 }}
+                  type="submit"
+                  disabled={submitting || otp.length < 4}
+                  className="flex-[2] text-white rounded-xl py-3 font-bold text-sm tracking-wide disabled:opacity-50 transition-all duration-200"
+                  style={{
+                    background:
+                      "linear-gradient(135deg, #059669, #10b981)",
+                    boxShadow:
+                      "0 4px 16px rgba(5, 150, 105, 0.35)",
+                  }}
+                >
+                  {submitting ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <svg
+                        className="animate-spin w-4 h-4"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                      >
+                        <circle
+                          className="opacity-25"
+                          cx="12"
+                          cy="12"
+                          r="10"
+                          stroke="currentColor"
+                          strokeWidth="4"
+                        />
+                        <path
+                          className="opacity-75"
+                          fill="currentColor"
+                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                        />
+                      </svg>
+                      Verifying...
+                    </span>
+                  ) : (
+                    "Verify & Sign In"
+                  )}
+                </motion.button>
+              </div>
+
+              {resendTimer > 0 ? (
+                <p className="text-center text-xs text-gray-400 font-medium">
+                  Resend OTP in {resendTimer}s
+                </p>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleResendOtp}
+                  disabled={submitting}
+                  className="w-full text-center text-xs text-emerald-600 font-bold hover:underline disabled:opacity-50"
+                >
+                  Resend OTP
+                </button>
+              )}
+            </form>
           )}
         </div>
       </motion.div>
