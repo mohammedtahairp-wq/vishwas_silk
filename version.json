@@ -1,6 +1,6 @@
 {
-  "versionName": "1.7.0",
-  "versionCode": 17,
+  "versionName": "1.8.0",
+  "versionCode": 18,
   "downloadUrl": "https://vishwassilk.com/vishwassilk.apk",
-  "releaseNotes": "Admin can now choose the pickup date when logging a collection."
+  "releaseNotes": "Faster and more reliable login with the new OTP system."
 }
