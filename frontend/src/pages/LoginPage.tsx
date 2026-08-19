@@ -7,6 +7,7 @@ import { apiErrorMessage } from "../api/client";
 
 declare global {
   interface Window {
+    initSendOTP?: (config: Record<string, unknown>) => void;
     sendOtp?: (
       identifier: string,
       successCb: (data: Record<string, unknown>) => void,
