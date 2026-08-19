@@ -2,7 +2,6 @@ import { env } from "../../config/env";
 import { BadRequestError, UnauthorizedError } from "../../lib/errors";
 
 interface OtpEntry {
-  requestId: string;
   expiresAt: number;
 }
 
@@ -19,30 +18,25 @@ function cleanExpired() {
 export async function sendOtp(phone: string) {
   cleanExpired();
 
-  const res = await fetch("https://api.msg91.com/api/v5/otp/send", {
+  const res = await fetch("https://control.msg91.com/api/v5/otp", {
     method: "POST",
-    headers: {
-      authkey: env.msg91AuthToken,
-      "Content-Type": "application/json",
-    },
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       mobile: `91${phone}`,
+      authkey: env.msg91AuthToken,
       otp_length: 4,
       otp_expiry: 5,
     }),
   });
 
-  const data = (await res.json()) as { type: string; message?: string; request_id?: string };
+  const data = (await res.json()) as { type: string; message?: string };
   console.log("[MSG91 Send]", JSON.stringify(data));
 
-  if (data.type !== "success" || !data.request_id) {
+  if (data.type !== "success") {
     throw new BadRequestError(data.message || "Failed to send OTP. Please try again.");
   }
 
-  otpStore.set(phone, {
-    requestId: data.request_id,
-    expiresAt: Date.now() + OTP_TTL_MS,
-  });
+  otpStore.set(phone, { expiresAt: Date.now() + OTP_TTL_MS });
 }
 
 export async function verifyOtp(phone: string, otp: string) {
@@ -56,15 +50,13 @@ export async function verifyOtp(phone: string, otp: string) {
     throw new UnauthorizedError("OTP has expired. Please request a new one.");
   }
 
-  const res = await fetch("https://api.msg91.com/api/v5/otp/verify", {
+  const res = await fetch("https://control.msg91.com/api/v5/otp/verify", {
     method: "POST",
-    headers: {
-      authkey: env.msg91AuthToken,
-      "Content-Type": "application/json",
-    },
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       mobile: `91${phone}`,
       otp: Number(otp),
+      authkey: env.msg91AuthToken,
     }),
   });
 
