@@ -8,7 +8,7 @@ declare global {
   interface Window {
     initSendOTP: (config: Record<string, unknown>) => void;
     sendOtp: (id: string, success?: (data: unknown) => void, error?: (err: unknown) => void) => void;
-    verifyOtp: (otp: string, success?: (data: unknown) => void, error?: (err: unknown) => void) => void;
+    verifyOtp: (otp: number, success?: (data: unknown) => void, error?: (err: unknown) => void) => void;
     retryOtp: (channel: string, success?: (data: unknown) => void, error?: (err: unknown) => void) => void;
   }
 }
