@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useAuth } from "../auth/AuthContext";
-import { apiErrorMessage } from "../api/client";
+import { apiClient, apiErrorMessage } from "../api/client";
 
 declare global {
   interface Window {
@@ -28,7 +28,7 @@ export function LoginPage() {
     document.body.appendChild(script);
   }, []);
 
-  function handleSendOtp() {
+  async function handleSendOtp() {
     setError(null);
     if (phone.length !== 10) {
       setError("Please enter a valid 10-digit phone number.");
@@ -40,8 +40,19 @@ export function LoginPage() {
     }
 
     setSubmitting(true);
-    widgetInitRef.current = false;
-    tryInitWidget();
+    try {
+      const { data } = await apiClient.post<{ registered: boolean }>("/auth/check-phone", { phone });
+      if (!data.registered) {
+        setError("This phone number is not registered. Please contact admin.");
+        setSubmitting(false);
+        return;
+      }
+      widgetInitRef.current = false;
+      tryInitWidget();
+    } catch (err) {
+      setError(apiErrorMessage(err, "Failed to verify phone. Please try again."));
+      setSubmitting(false);
+    }
   }
 
   function tryInitWidget() {

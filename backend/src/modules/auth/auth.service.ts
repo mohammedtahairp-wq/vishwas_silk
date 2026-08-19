@@ -20,6 +20,11 @@ function isValidWidgetToken(widgetToken: string): boolean {
   }
 }
 
+export async function checkPhoneRegistered(phone: string): Promise<boolean> {
+  const user = await prisma.user.findUnique({ where: { loginPhone: phone } });
+  return !!(user && user.status === "active");
+}
+
 export async function verifyTokenAndLogin(widgetToken: string, phone: string) {
   if (!isValidWidgetToken(widgetToken)) {
     throw new BadRequestError("Invalid widget token.");

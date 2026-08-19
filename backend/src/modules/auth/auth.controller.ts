@@ -2,10 +2,20 @@ import { Request, Response } from "express";
 import { z } from "zod";
 import * as authService from "./auth.service";
 
+const checkPhoneSchema = z.object({
+  phone: z.string().regex(/^\d{10}$/, "Phone must be a 10-digit number"),
+});
+
 const verifyOtpSchema = z.object({
   token: z.string().min(1, "Widget token is required"),
   phone: z.string().regex(/^\d{10}$/, "Phone must be a 10-digit number"),
 });
+
+export async function checkPhoneHandler(req: Request, res: Response) {
+  const { phone } = checkPhoneSchema.parse(req.body);
+  const exists = await authService.checkPhoneRegistered(phone);
+  res.json({ registered: exists });
+}
 
 export async function verifyOtpHandler(req: Request, res: Response) {
   const { token, phone } = verifyOtpSchema.parse(req.body);
