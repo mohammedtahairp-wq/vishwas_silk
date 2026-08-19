@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useAuth } from "../auth/AuthContext";
-import { apiClient, apiErrorMessage } from "../api/client";
+import { apiErrorMessage } from "../api/client";
 
 declare global {
   interface Window {
@@ -60,10 +60,12 @@ export function LoginPage() {
       identifier: `91${phone}`,
       success: async (data: Record<string, unknown>) => {
         try {
-          const raw = JSON.stringify(data);
-          console.log("[WIDGET DATA]", raw);
-          await apiClient.post("/auth/debug-widget", { raw, parsed: data });
-          const role = await loginWithOtp(raw);
+          const widgetToken =
+            (data.message as string) ||
+            (data.token as string) ||
+            (data.access_token as string) ||
+            JSON.stringify(data);
+          const role = await loginWithOtp(widgetToken, phone);
           navigate(`/${role}`, { replace: true });
         } catch (err) {
           setError(apiErrorMessage(err, "Login failed. Please try again."));

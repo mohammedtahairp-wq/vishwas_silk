@@ -4,18 +4,13 @@ import * as authService from "./auth.service";
 
 const verifyOtpSchema = z.object({
   token: z.string().min(1, "Widget token is required"),
+  phone: z.string().regex(/^\d{10}$/, "Phone must be a 10-digit number"),
 });
 
 export async function verifyOtpHandler(req: Request, res: Response) {
-  const { token } = verifyOtpSchema.parse(req.body);
-  console.log("[VERIFY-OTP] Raw token data:", token);
-  const result = await authService.verifyTokenAndLogin(token);
+  const { token, phone } = verifyOtpSchema.parse(req.body);
+  const result = await authService.verifyTokenAndLogin(token, phone);
   res.json(result);
-}
-
-export async function debugWidgetHandler(req: Request, res: Response) {
-  console.log("[DEBUG-WIDGET] Body:", JSON.stringify(req.body));
-  res.json({ received: req.body });
 }
 
 export async function logoutHandler(_req: Request, res: Response) {
