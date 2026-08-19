@@ -37,11 +37,37 @@ export function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [resendTimer, setResendTimer] = useState(0);
-  const widgetLoaded = useRef(false);
+  const [widgetReady, setWidgetReady] = useState(false);
 
   useEffect(() => {
+    function initWidget() {
+      if (!window.initSendOTP) {
+        setTimeout(initWidget, 300);
+        return;
+      }
+
+      window.initSendOTP({
+        widgetId: "366873666f70363331363236",
+        tokenAuth: "562052TL8m0XmAw6a854b16P1",
+        exposeMethods: true,
+        captchaRenderId: "captcha-container",
+        success: (data: Record<string, unknown>) => {},
+        failure: (error: Record<string, unknown>) => {},
+      });
+
+      setTimeout(() => {
+        if (window.sendOtp && window.verifyOtp) {
+          setWidgetReady(true);
+        } else {
+          setTimeout(() => {
+            setWidgetReady(!!(window.sendOtp && window.verifyOtp));
+          }, 1000);
+        }
+      }, 500);
+    }
+
     if (document.getElementById("msg91-widget-script")) {
-      widgetLoaded.current = true;
+      initWidget();
       return;
     }
 
@@ -49,11 +75,7 @@ export function LoginPage() {
     script.id = "msg91-widget-script";
     script.src = "https://verify.msg91.com/otp-provider.js";
     script.async = true;
-    script.onload = () => {
-      if (window.sendOtp) {
-        widgetLoaded.current = true;
-      }
-    };
+    script.onload = () => initWidget();
     document.body.appendChild(script);
   }, []);
 
@@ -74,28 +96,12 @@ export function LoginPage() {
     e.preventDefault();
     setError(null);
 
-    if (!widgetLoaded.current || !window.sendOtp) {
-      setError("OTP service is loading. Please wait a moment and try again.");
+    if (!window.sendOtp) {
+      setError("OTP service is still loading. Please refresh and try again.");
       return;
     }
 
     setSubmitting(true);
-
-    const config = {
-      widgetId: "366873666f70363331363236",
-      tokenAuth: "562052TL8m0XmAw6a854b16P1",
-      exposeMethods: true,
-    };
-
-    window.initSendOTP?.(config);
-
-    await new Promise((r) => setTimeout(r, 500));
-
-    if (!window.sendOtp) {
-      setError("OTP service failed to load. Please refresh and try again.");
-      setSubmitting(false);
-      return;
-    }
 
     window.sendOtp(
       `91${phone}`,
@@ -107,6 +113,7 @@ export function LoginPage() {
       (err) => {
         setError(
           (err.message as string) ||
+            (err.error as string) ||
             "Failed to send OTP. Please try again."
         );
         setSubmitting(false);
@@ -118,7 +125,13 @@ export function LoginPage() {
     setError(null);
     setSubmitting(true);
 
-    window.retryOtp?.(
+    if (!window.retryOtp) {
+      setError("OTP service not ready.");
+      setSubmitting(false);
+      return;
+    }
+
+    window.retryOtp(
       `91${phone}`,
       () => {
         startResendTimer();
@@ -154,7 +167,7 @@ export function LoginPage() {
             (data.access_token as string) ||
             (data.message as string) ||
             "";
-          if (!widgetToken) {
+          if (!widgetToken || widgetToken.length < 10) {
             setError("Verification succeeded but no token received.");
             setSubmitting(false);
             return;
@@ -193,21 +206,15 @@ export function LoginPage() {
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div
           className="absolute -top-40 -right-40 w-80 h-80 rounded-full opacity-30"
-          style={{
-            background: "linear-gradient(135deg, #34d399, #6ee7b7)",
-          }}
+          style={{ background: "linear-gradient(135deg, #34d399, #6ee7b7)" }}
         />
         <div
           className="absolute -bottom-40 -left-40 w-96 h-96 rounded-full opacity-20"
-          style={{
-            background: "linear-gradient(135deg, #6ee7b7, #10b981)",
-          }}
+          style={{ background: "linear-gradient(135deg, #6ee7b7, #10b981)" }}
         />
         <div
           className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full opacity-10"
-          style={{
-            background: "radial-gradient(circle, #10b981, transparent)",
-          }}
+          style={{ background: "radial-gradient(circle, #10b981, transparent)" }}
         />
       </div>
 
@@ -227,17 +234,15 @@ export function LoginPage() {
               "0 8px 32px rgba(16, 185, 129, 0.1), 0 1px 3px rgba(0,0,0,0.05)",
           }}
         >
+          <div id="captcha-container" style={{ display: "none" }} />
+
           <motion.div
             initial={{ scale: 0.8, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
             className="flex justify-center mb-6"
           >
-            <img
-              src="/logo.jpeg"
-              alt="VISHWAS SILK"
-              className="h-24 w-auto"
-            />
+            <img src="/logo.jpeg" alt="VISHWAS SILK" className="h-24 w-auto" />
           </motion.div>
 
           <motion.div
@@ -281,9 +286,7 @@ export function LoginPage() {
                     style={{ background: "rgba(255,255,255,0.7)" }}
                     value={phone}
                     onChange={(e) =>
-                      setPhone(
-                        e.target.value.replace(/\D/g, "").slice(0, 10)
-                      )
+                      setPhone(e.target.value.replace(/\D/g, "").slice(0, 10))
                     }
                     placeholder="Enter 10-digit number"
                     required
@@ -311,37 +314,23 @@ export function LoginPage() {
                 whileHover={{ scale: 1.01 }}
                 whileTap={{ scale: 0.98 }}
                 type="submit"
-                disabled={submitting || phone.length !== 10}
+                disabled={submitting || phone.length !== 10 || !widgetReady}
                 className="w-full text-white rounded-xl py-3 font-bold text-sm tracking-wide disabled:opacity-50 transition-all duration-200"
                 style={{
-                  background:
-                    "linear-gradient(135deg, #059669, #10b981)",
+                  background: "linear-gradient(135deg, #059669, #10b981)",
                   boxShadow: "0 4px 16px rgba(5, 150, 105, 0.35)",
                 }}
               >
                 {submitting ? (
                   <span className="flex items-center justify-center gap-2">
-                    <svg
-                      className="animate-spin w-4 h-4"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                    >
-                      <circle
-                        className="opacity-25"
-                        cx="12"
-                        cy="12"
-                        r="10"
-                        stroke="currentColor"
-                        strokeWidth="4"
-                      />
-                      <path
-                        className="opacity-75"
-                        fill="currentColor"
-                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                      />
+                    <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                     </svg>
                     Sending OTP...
                   </span>
+                ) : !widgetReady ? (
+                  "Loading..."
                 ) : (
                   "Get OTP"
                 )}
@@ -402,32 +391,15 @@ export function LoginPage() {
                   disabled={submitting || otp.length < 4}
                   className="flex-[2] text-white rounded-xl py-3 font-bold text-sm tracking-wide disabled:opacity-50 transition-all duration-200"
                   style={{
-                    background:
-                      "linear-gradient(135deg, #059669, #10b981)",
-                    boxShadow:
-                      "0 4px 16px rgba(5, 150, 105, 0.35)",
+                    background: "linear-gradient(135deg, #059669, #10b981)",
+                    boxShadow: "0 4px 16px rgba(5, 150, 105, 0.35)",
                   }}
                 >
                   {submitting ? (
                     <span className="flex items-center justify-center gap-2">
-                      <svg
-                        className="animate-spin w-4 h-4"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                      >
-                        <circle
-                          className="opacity-25"
-                          cx="12"
-                          cy="12"
-                          r="10"
-                          stroke="currentColor"
-                          strokeWidth="4"
-                        />
-                        <path
-                          className="opacity-75"
-                          fill="currentColor"
-                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                        />
+                      <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                       </svg>
                       Verifying...
                     </span>
