@@ -11,7 +11,5 @@ function required(name: string): string {
 export const env = {
   databaseUrl: required("DATABASE_URL"),
   jwtSecret: required("JWT_SECRET"),
-  msg91AuthToken: required("MSG91_AUTH_TOKEN"),
-  msg91TemplateId: required("MSG91_TEMPLATE_ID"),
   port: Number(process.env.PORT ?? 4000),
 };

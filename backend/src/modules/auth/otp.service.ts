@@ -1,74 +1,49 @@
-import { env } from "../../config/env";
-import { BadRequestError, UnauthorizedError } from "../../lib/errors";
+import { UnauthorizedError, BadRequestError } from "../../lib/errors";
 
-interface OtpEntry {
-  expiresAt: number;
+interface WidgetTokenPayload {
+  sub?: string;
+  phone?: string;
+  mobile?: string;
+  identifier?: string;
+  iat?: number;
+  exp?: number;
+  [key: string]: unknown;
 }
 
-const otpStore = new Map<string, OtpEntry>();
-const OTP_TTL_MS = 5 * 60 * 1000;
-
-function cleanExpired() {
-  const now = Date.now();
-  for (const [phone, entry] of otpStore) {
-    if (entry.expiresAt <= now) otpStore.delete(phone);
-  }
+function base64UrlDecode(segment: string): string {
+  const b64 = segment.replace(/-/g, "+").replace(/_/g, "/");
+  const padded = b64 + "=".repeat((4 - (b64.length % 4)) % 4);
+  return Buffer.from(padded, "base64").toString("utf-8");
 }
 
-export async function sendOtp(phone: string) {
-  cleanExpired();
-
-  const params = new URLSearchParams({
-    template_id: env.msg91TemplateId,
-    mobile: `91${phone}`,
-    authkey: env.msg91AuthToken,
-    otp_length: "4",
-    otp_expiry: "5",
-  });
-
-  const res = await fetch(`https://control.msg91.com/api/v5/otp?${params}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-  });
-
-  const data = (await res.json()) as { type: string; message?: string; request_id?: string };
-  console.log("[MSG91 Send]", JSON.stringify(data));
-
-  if (data.type !== "success") {
-    throw new BadRequestError(data.message || "Failed to send OTP. Please try again.");
+export function extractPhoneFromWidgetToken(widgetToken: string): string {
+  const parts = widgetToken.split(".");
+  if (parts.length < 2) {
+    throw new BadRequestError("Invalid widget token format.");
   }
 
-  otpStore.set(phone, { expiresAt: Date.now() + OTP_TTL_MS });
-}
-
-export async function verifyOtp(phone: string, otp: string) {
-  const entry = otpStore.get(phone);
-  if (!entry) {
-    throw new BadRequestError("No OTP requested for this number. Please request a new OTP.");
+  let payload: WidgetTokenPayload;
+  try {
+    payload = JSON.parse(base64UrlDecode(parts[1]));
+  } catch {
+    throw new BadRequestError("Invalid widget token: could not decode payload.");
   }
 
-  if (entry.expiresAt <= Date.now()) {
-    otpStore.delete(phone);
-    throw new UnauthorizedError("OTP has expired. Please request a new one.");
+  if (payload.exp && payload.exp * 1000 < Date.now()) {
+    throw new UnauthorizedError("Widget token has expired. Please verify OTP again.");
   }
 
-  const params = new URLSearchParams({
-    mobile: `91${phone}`,
-    otp,
-    authkey: env.msg91AuthToken,
-  });
+  const phone =
+    payload.phone ||
+    payload.mobile ||
+    payload.identifier ||
+    payload.sub ||
+    "";
 
-  const res = await fetch(`https://control.msg91.com/api/v5/otp/verify?${params}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-  });
-
-  const data = (await res.json()) as { type: string; message?: string };
-  console.log("[MSG91 Verify]", JSON.stringify(data));
-
-  otpStore.delete(phone);
-
-  if (data.type !== "success") {
-    throw new UnauthorizedError(data.message || "Invalid OTP. Please try again.");
+  const digits = phone.replace(/\D/g, "");
+  if (digits.length < 10) {
+    throw new BadRequestError("Widget token does not contain a valid phone number.");
   }
+
+  return digits.slice(-10);
 }
