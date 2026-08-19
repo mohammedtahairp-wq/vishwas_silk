@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useAuth } from "../auth/AuthContext";
-import { apiErrorMessage } from "../api/client";
+import { apiClient, apiErrorMessage } from "../api/client";
 
 declare global {
   interface Window {
@@ -60,16 +60,10 @@ export function LoginPage() {
       identifier: `91${phone}`,
       success: async (data: Record<string, unknown>) => {
         try {
-          const widgetToken =
-            (data.token as string) ||
-            (data.access_token as string) ||
-            "";
-          if (!widgetToken || widgetToken.length < 10) {
-            setError("Verification succeeded but no token received. Please try again.");
-            setSubmitting(false);
-            return;
-          }
-          const role = await loginWithOtp(widgetToken);
+          const raw = JSON.stringify(data);
+          console.log("[WIDGET DATA]", raw);
+          await apiClient.post("/auth/debug-widget", { raw, parsed: data });
+          const role = await loginWithOtp(raw);
           navigate(`/${role}`, { replace: true });
         } catch (err) {
           setError(apiErrorMessage(err, "Login failed. Please try again."));

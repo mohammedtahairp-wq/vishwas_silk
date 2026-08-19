@@ -16,34 +16,101 @@ function base64UrlDecode(segment: string): string {
   return Buffer.from(padded, "base64").toString("utf-8");
 }
 
-export function extractPhoneFromWidgetToken(widgetToken: string): string {
-  const parts = widgetToken.split(".");
-  if (parts.length < 2) {
-    throw new BadRequestError("Invalid widget token format.");
-  }
-
-  let payload: WidgetTokenPayload;
+function isJwt(str: string): boolean {
+  const parts = str.split(".");
+  if (parts.length !== 3) return false;
   try {
-    payload = JSON.parse(base64UrlDecode(parts[1]));
+    const payload = JSON.parse(base64UrlDecode(parts[1]));
+    return typeof payload === "object" && payload !== null;
   } catch {
-    throw new BadRequestError("Invalid widget token: could not decode payload.");
+    return false;
+  }
+}
+
+function findJwtInObject(obj: unknown): string | null {
+  if (typeof obj === "string" && isJwt(obj)) return obj;
+
+  if (typeof obj === "object" && obj !== null && !Array.isArray(obj)) {
+    const record = obj as Record<string, unknown>;
+    const preferredKeys = [
+      "token",
+      "access_token",
+      "accessToken",
+      "tokenAuth",
+      "jwt",
+      "access_token_jwt",
+    ];
+    for (const key of preferredKeys) {
+      if (typeof record[key] === "string" && isJwt(record[key] as string)) {
+        return record[key] as string;
+      }
+    }
+    for (const key of Object.keys(record)) {
+      const val = record[key];
+      if (typeof val === "string" && isJwt(val)) return val;
+      if (typeof val === "object" && val !== null) {
+        const found = findJwtInObject(val);
+        if (found) return found;
+      }
+    }
   }
 
-  if (payload.exp && payload.exp * 1000 < Date.now()) {
-    throw new UnauthorizedError("Widget token has expired. Please verify OTP again.");
+  if (Array.isArray(obj)) {
+    for (const item of obj) {
+      const found = findJwtInObject(item);
+      if (found) return found;
+    }
   }
 
-  const phone =
-    payload.phone ||
-    payload.mobile ||
-    payload.identifier ||
-    payload.sub ||
-    "";
+  return null;
+}
 
-  const digits = phone.replace(/\D/g, "");
-  if (digits.length < 10) {
-    throw new BadRequestError("Widget token does not contain a valid phone number.");
+export function extractPhoneFromWidgetToken(widgetToken: string): string {
+  let tokenStr = widgetToken.trim();
+
+  if (tokenStr.startsWith("{")) {
+    try {
+      const parsed = JSON.parse(tokenStr);
+      const found = findJwtInObject(parsed);
+      if (found) tokenStr = found;
+      else {
+        const phoneFromJson =
+          parsed.phone ||
+          parsed.mobile ||
+          parsed.identifier ||
+          parsed.sub ||
+          "";
+        const digits = phoneFromJson.replace(/\D/g, "");
+        if (digits.length >= 10) return digits.slice(-10);
+      }
+    } catch {
+      // not JSON, try as raw token
+    }
   }
 
-  return digits.slice(-10);
+  if (isJwt(tokenStr)) {
+    const parts = tokenStr.split(".");
+    let payload: WidgetTokenPayload;
+    try {
+      payload = JSON.parse(base64UrlDecode(parts[1]));
+    } catch {
+      throw new BadRequestError("Invalid widget token: could not decode payload.");
+    }
+
+    if (payload.exp && payload.exp * 1000 < Date.now()) {
+      throw new UnauthorizedError("Widget token has expired. Please verify OTP again.");
+    }
+
+    const phone =
+      payload.phone ||
+      payload.mobile ||
+      payload.identifier ||
+      payload.sub ||
+      "";
+
+    const digits = phone.replace(/\D/g, "");
+    if (digits.length >= 10) return digits.slice(-10);
+  }
+
+  throw new BadRequestError("Could not extract phone number from widget response. Please try again.");
 }
