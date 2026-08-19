@@ -8,7 +8,7 @@ declare global {
   interface Window {
     initSendOTP: (config: Record<string, unknown>) => void;
     sendOtp: (id: string, success?: (data: unknown) => void, error?: (err: unknown) => void) => void;
-    verifyOtp: (otp: number, success?: (data: unknown) => void, error?: (err: unknown) => void) => void;
+    verifyOtp: (otp: number, success?: (data: unknown) => void, error?: (err: unknown) => void, reqId?: string) => void;
     retryOtp: (channel: string, success?: (data: unknown) => void, error?: (err: unknown) => void) => void;
   }
 }
@@ -24,6 +24,7 @@ export function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [resendTimer, setResendTimer] = useState(0);
+  const reqIdRef = useRef<string | null>(null);
   const widgetReady = useRef(false);
 
   const onWidgetSuccess = useCallback(
@@ -110,7 +111,9 @@ export function LoginPage() {
 
     window.sendOtp(
       `91${phone.trim()}`,
-      () => {
+      (data: unknown) => {
+        const response = data as { request_id?: string; reqId?: string };
+        reqIdRef.current = response.reqId || response.request_id || null;
         setSubmitting(false);
         setStep("otp");
         startResendTimer();
@@ -150,7 +153,8 @@ export function LoginPage() {
         const message = (err as { message?: string }).message || "Invalid OTP. Please try again.";
         setError(message);
         setSubmitting(false);
-      }
+      },
+      reqIdRef.current || undefined
     );
   }
 
