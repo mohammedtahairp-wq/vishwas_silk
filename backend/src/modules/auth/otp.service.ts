@@ -24,6 +24,7 @@ export async function sendOtp(phone: string) {
     body: JSON.stringify({
       mobile: `91${phone}`,
       authkey: env.msg91AuthToken,
+      template_id: env.msg91TemplateId,
       otp_length: 4,
       otp_expiry: 5,
     }),
