@@ -7,7 +7,7 @@ export type Role = "admin" | "rider" | "customer";
 interface AuthContextValue {
   token: string | null;
   role: Role | null;
-  loginWithOtp: (phone: string, otp: string) => Promise<Role>;
+  loginWithOtp: (phone: string, token: string) => Promise<Role>;
   logout: () => void;
 }
 
@@ -17,10 +17,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [token, setToken] = useState<string | null>(() => localStorage.getItem(TOKEN_STORAGE_KEY));
   const [role, setRole] = useState<Role | null>(() => localStorage.getItem(ROLE_STORAGE_KEY) as Role | null);
 
-  const loginWithOtp = async (phone: string, otp: string) => {
+  const loginWithOtp = async (phone: string, token: string) => {
     const { data } = await apiClient.post<{ token: string; role: Role }>("/auth/verify-otp", {
       phone,
-      otp,
+      token,
     });
     localStorage.setItem(TOKEN_STORAGE_KEY, data.token);
     localStorage.setItem(ROLE_STORAGE_KEY, data.role);

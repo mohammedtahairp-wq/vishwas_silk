@@ -1,68 +1,20 @@
 import { env } from "../../config/env";
-import { BadRequestError, UnauthorizedError } from "../../lib/errors";
+import { UnauthorizedError } from "../../lib/errors";
 
-interface OtpEntry {
-  otp: string;
-  expiresAt: number;
-}
-
-const otpStore = new Map<string, OtpEntry>();
-const OTP_TTL_MS = 5 * 60 * 1000;
-
-function generateOtp(): string {
-  return Math.floor(100000 + Math.random() * 900000).toString();
-}
-
-function cleanExpired() {
-  const now = Date.now();
-  for (const [phone, entry] of otpStore) {
-    if (entry.expiresAt <= now) otpStore.delete(phone);
-  }
-}
-
-export async function sendOtp(phone: string) {
-  cleanExpired();
-
-  const otp = generateOtp();
-  otpStore.set(phone, { otp, expiresAt: Date.now() + OTP_TTL_MS });
-
-  const params = new URLSearchParams({
-    variables_values: otp,
-    route: "otp",
-    numbers: phone,
-  });
-
-  const res = await fetch("https://www.fast2sms.com/dev/bulkV2", {
+export async function verifyMsg91Token(token: string): Promise<void> {
+  const res = await fetch("https://api.msg91.com/api/v5/otp/verify", {
     method: "POST",
     headers: {
-      authorization: env.fast2smsApiKey,
-      "Content-Type": "application/x-www-form-urlencoded",
+      authkey: env.msg91AuthToken,
+      "Content-Type": "application/json",
     },
-    body: params.toString(),
+    body: JSON.stringify({ token }),
   });
 
-  const data = await res.json() as { return: boolean; message?: string };
+  const data = (await res.json()) as { type: string; message?: string };
+  console.log("[MSG91 Verify]", JSON.stringify(data));
 
-  if (!data.return) {
-    otpStore.delete(phone);
-    throw new BadRequestError(data.message || "Failed to send OTP. Please try again.");
+  if (data.type !== "success") {
+    throw new UnauthorizedError("OTP verification failed. Please try again.");
   }
-}
-
-export function verifyOtp(phone: string, otp: string): void {
-  const entry = otpStore.get(phone);
-  if (!entry) {
-    throw new BadRequestError("No OTP requested for this number. Please request a new OTP.");
-  }
-
-  if (entry.expiresAt <= Date.now()) {
-    otpStore.delete(phone);
-    throw new UnauthorizedError("OTP has expired. Please request a new one.");
-  }
-
-  if (entry.otp !== otp) {
-    throw new UnauthorizedError("Invalid OTP. Please try again.");
-  }
-
-  otpStore.delete(phone);
 }

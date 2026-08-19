@@ -1,9 +1,17 @@
-import { useState } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import type { FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useAuth } from "../auth/AuthContext";
-import { apiClient, apiErrorMessage } from "../api/client";
+
+declare global {
+  interface Window {
+    initSendOTP: (config: Record<string, unknown>) => void;
+    sendOtp: (id: string, success?: (data: unknown) => void, error?: (err: unknown) => void) => void;
+    verifyOtp: (otp: string, success?: (data: unknown) => void, error?: (err: unknown) => void) => void;
+    retryOtp: (channel: string, success?: (data: unknown) => void, error?: (err: unknown) => void) => void;
+  }
+}
 
 type Step = "phone" | "otp";
 
@@ -16,6 +24,65 @@ export function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [resendTimer, setResendTimer] = useState(0);
+  const widgetReady = useRef(false);
+
+  const onWidgetSuccess = useCallback(
+    (data: unknown) => {
+      const response = data as { token?: string; message?: string };
+
+      if (step === "phone") {
+        setSubmitting(false);
+        setStep("otp");
+        startResendTimer();
+      } else if (step === "otp" && response.token) {
+        loginWithOtp(phone, response.token)
+          .then((role) => navigate(`/${role}`, { replace: true }))
+          .catch((err: Error) => {
+            setError(err.message || "Login failed. Please try again.");
+            setSubmitting(false);
+          });
+      }
+    },
+    [step, phone, loginWithOtp, navigate]
+  );
+
+  const onWidgetError = useCallback(
+    (err: unknown) => {
+      const message = (err as { message?: string }).message || "Something went wrong. Please try again.";
+      setError(message);
+      setSubmitting(false);
+    },
+    []
+  );
+
+  useEffect(() => {
+    if (widgetReady.current) return;
+
+    const script = document.createElement("script");
+    script.src = "https://verify.msg91.com/otp-provider.js";
+    script.onload = () => {
+      window.initSendOTP({
+        widgetId: import.meta.env.VITE_MSG91_WIDGET_ID,
+        tokenAuth: import.meta.env.VITE_MSG91_AUTH_TOKEN,
+        exposeMethods: true,
+        success: onWidgetSuccess,
+        failure: onWidgetError,
+      });
+      widgetReady.current = true;
+    };
+    document.head.appendChild(script);
+  }, []);
+
+  useEffect(() => {
+    if (!widgetReady.current) return;
+    window.initSendOTP({
+      widgetId: import.meta.env.VITE_MSG91_WIDGET_ID,
+      tokenAuth: import.meta.env.VITE_MSG91_AUTH_TOKEN,
+      exposeMethods: true,
+      success: onWidgetSuccess,
+      failure: onWidgetError,
+    });
+  }, [onWidgetSuccess, onWidgetError]);
 
   function startResendTimer() {
     setResendTimer(30);
@@ -34,42 +101,54 @@ export function LoginPage() {
     e.preventDefault();
     setError(null);
     setSubmitting(true);
-    try {
-      await apiClient.post("/auth/send-otp", { phone: phone.trim() });
-      startResendTimer();
-      setStep("otp");
-    } catch (err) {
-      setError(apiErrorMessage(err, "Failed to send OTP. Please try again."));
-    } finally {
-      setSubmitting(false);
-    }
-  }
 
-  async function handleResendOtp() {
-    setError(null);
-    setSubmitting(true);
-    try {
-      await apiClient.post("/auth/send-otp", { phone: phone.trim() });
-      startResendTimer();
-    } catch (err) {
-      setError(apiErrorMessage(err, "Failed to resend OTP. Please try again."));
-    } finally {
+    if (!widgetReady.current) {
+      setError("OTP service is loading. Please try again.");
       setSubmitting(false);
+      return;
     }
+
+    window.sendOtp(
+      `91${phone.trim()}`,
+      () => {},
+      (err: unknown) => {
+        const message = (err as { message?: string }).message || "Failed to send OTP. Please try again.";
+        setError(message);
+        setSubmitting(false);
+      }
+    );
   }
 
   async function handleVerifyOtp(e: FormEvent) {
     e.preventDefault();
     setError(null);
     setSubmitting(true);
-    try {
-      const role = await loginWithOtp(phone.trim(), otp);
-      navigate(`/${role}`, { replace: true });
-    } catch (err) {
-      setError(apiErrorMessage(err, "Invalid OTP. Please try again."));
-    } finally {
-      setSubmitting(false);
-    }
+
+    window.verifyOtp(
+      otp.trim(),
+      () => {},
+      (err: unknown) => {
+        const message = (err as { message?: string }).message || "Invalid OTP. Please try again.";
+        setError(message);
+        setSubmitting(false);
+      }
+    );
+  }
+
+  async function handleResendOtp() {
+    setError(null);
+    setSubmitting(true);
+
+    window.sendOtp(
+      `91${phone.trim()}`,
+      () => {},
+      (err: unknown) => {
+        const message = (err as { message?: string }).message || "Failed to resend OTP. Please try again.";
+        setError(message);
+        setSubmitting(false);
+      }
+    );
+    startResendTimer();
   }
 
   function handleBack() {
@@ -79,7 +158,7 @@ export function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center relative overflow-hidden" style={{ background: "linear-gradient(135deg, #f1f5f9 0%, #d1fae5 50%, #ecfdf5 100%" }}>
+    <div className="min-h-screen flex items-center justify-center relative overflow-hidden" style={{ background: "linear-gradient(135deg, #f1f5f9 0%, #d1fae5 50%, #ecfdf5 100%)" }}>
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-40 -right-40 w-80 h-80 rounded-full opacity-30" style={{ background: "linear-gradient(135deg, #34d399, #6ee7b7)" }} />
         <div className="absolute -bottom-40 -left-40 w-96 h-96 rounded-full opacity-20" style={{ background: "linear-gradient(135deg, #6ee7b7, #10b981)" }} />

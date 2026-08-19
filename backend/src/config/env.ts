@@ -11,6 +11,6 @@ function required(name: string): string {
 export const env = {
   databaseUrl: required("DATABASE_URL"),
   jwtSecret: required("JWT_SECRET"),
-  fast2smsApiKey: required("FAST2SMS_API_KEY"),
+  msg91AuthToken: required("MSG91_AUTH_TOKEN"),
   port: Number(process.env.PORT ?? 4000),
 };
