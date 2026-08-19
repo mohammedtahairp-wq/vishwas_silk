@@ -110,7 +110,11 @@ export function LoginPage() {
 
     window.sendOtp(
       `91${phone.trim()}`,
-      () => {},
+      () => {
+        setSubmitting(false);
+        setStep("otp");
+        startResendTimer();
+      },
       (err: unknown) => {
         const message = (err as { message?: string }).message || "Failed to send OTP. Please try again.";
         setError(message);
@@ -126,7 +130,17 @@ export function LoginPage() {
 
     window.verifyOtp(
       otp.trim(),
-      () => {},
+      (data: unknown) => {
+        const response = data as { token?: string };
+        if (response.token) {
+          loginWithOtp(phone, response.token)
+            .then((role) => navigate(`/${role}`, { replace: true }))
+            .catch((err: Error) => {
+              setError(err.message || "Login failed. Please try again.");
+              setSubmitting(false);
+            });
+        }
+      },
       (err: unknown) => {
         const message = (err as { message?: string }).message || "Invalid OTP. Please try again.";
         setError(message);
