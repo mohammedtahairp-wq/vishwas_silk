@@ -129,16 +129,21 @@ export function LoginPage() {
     setSubmitting(true);
 
     window.verifyOtp(
-      otp.trim(),
+      Number(otp.trim()),
       (data: unknown) => {
-        const response = data as { token?: string };
-        if (response.token) {
-          loginWithOtp(phone, response.token)
+        console.log("[MSG91 verifyOtp] success:", data);
+        const response = data as { token?: string; accessToken?: string; request_id?: string };
+        const accessToken = response.token || response.accessToken;
+        if (accessToken) {
+          loginWithOtp(phone, accessToken)
             .then((role) => navigate(`/${role}`, { replace: true }))
             .catch((err: Error) => {
               setError(err.message || "Login failed. Please try again.");
               setSubmitting(false);
             });
+        } else {
+          setError("Verification succeeded but no token received. Please try again.");
+          setSubmitting(false);
         }
       },
       (err: unknown) => {
@@ -278,11 +283,11 @@ export function LoginPage() {
                   style={{ background: "rgba(255,255,255,0.7)" }}
                   value={otp}
                   onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
-                  placeholder="Enter 6-digit code"
+                  placeholder="Enter OTP code"
                   required
                   autoFocus
                   inputMode="numeric"
-                  pattern="[0-9]{6}"
+                  pattern="[0-9]+"
                   maxLength={6}
                 />
               </motion.div>
@@ -315,7 +320,7 @@ export function LoginPage() {
                   whileHover={{ scale: 1.01 }}
                   whileTap={{ scale: 0.98 }}
                   type="submit"
-                  disabled={submitting || otp.length !== 6}
+                  disabled={submitting || otp.length < 4}
                   className="flex-[2] text-white rounded-xl py-3 font-bold text-sm tracking-wide disabled:opacity-50 transition-all duration-200"
                   style={{ background: "linear-gradient(135deg, #059669, #10b981)", boxShadow: "0 4px 16px rgba(5, 150, 105, 0.35)" }}
                 >
