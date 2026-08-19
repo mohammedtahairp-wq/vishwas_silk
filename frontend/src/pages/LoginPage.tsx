@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
@@ -51,8 +51,8 @@ export function LoginPage() {
         tokenAuth: "562052TL8m0XmAw6a854b16P1",
         exposeMethods: true,
         captchaRenderId: "captcha-container",
-        success: (data: Record<string, unknown>) => {},
-        failure: (error: Record<string, unknown>) => {},
+        success: () => {},
+        failure: () => {},
       });
 
       setTimeout(() => {
