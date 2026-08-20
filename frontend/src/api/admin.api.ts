@@ -28,7 +28,7 @@ export const adminApi = {
     apiClient.post<CreateRiderResult>("/admin/riders", data).then((r) => r.data),
   listRiders: () => apiClient.get<Rider[]>("/admin/riders").then((r) => r.data),
   getRider: (id: string) => apiClient.get<Rider>(`/admin/riders/${id}`).then((r) => r.data),
-  updateRider: (id: string, data: { name?: string; phone?: string; villageArea?: string; status?: "active" | "inactive" }) =>
+  updateRider: (id: string, data: { name?: string; phone?: string; villageArea?: string; status?: "active" | "inactive"; loginPhone?: string }) =>
     apiClient.put<Rider>(`/admin/riders/${id}`, data).then((r) => r.data),
   deleteRider: (id: string) => apiClient.delete(`/admin/riders/${id}`).then((r) => r.data),
   getRiderCustomers: (id: string) => apiClient.get<Customer[]>(`/admin/riders/${id}/customers`).then((r) => r.data),

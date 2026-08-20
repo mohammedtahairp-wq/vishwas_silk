@@ -161,6 +161,7 @@ function EditRiderModal({ rider, cities, onClose, onSaved }: { rider: Rider; cit
   const [phone, setPhone] = useState(rider.phone);
   const [villageArea, setVillageArea] = useState(rider.villageArea ?? "");
   const [status, setStatus] = useState<Rider["status"]>(rider.status);
+  const [loginPhone, setLoginPhone] = useState(rider.loginPhone ?? "");
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -169,7 +170,7 @@ function EditRiderModal({ rider, cities, onClose, onSaved }: { rider: Rider; cit
     setSaving(true);
     setError(null);
     try {
-      await adminApi.updateRider(rider.id, { name, phone, villageArea: villageArea || undefined, status });
+      await adminApi.updateRider(rider.id, { name, phone, villageArea: villageArea || undefined, status, loginPhone: loginPhone || undefined });
       onSaved();
     } catch (err) {
       setError(apiErrorMessage(err, "Could not save changes."));
@@ -194,6 +195,9 @@ function EditRiderModal({ rider, cities, onClose, onSaved }: { rider: Rider; cit
             <option value="active">Active</option>
             <option value="inactive">Inactive</option>
           </select>
+        </Field>
+        <Field label="Login Phone">
+          <input className="w-full border border-gray-300 rounded px-2 py-1.5" value={loginPhone} onChange={(e) => setLoginPhone(e.target.value)} required />
         </Field>
         {error && <p className="text-sm text-red-600">{error}</p>}
         <div className="flex justify-end gap-2 pt-2">

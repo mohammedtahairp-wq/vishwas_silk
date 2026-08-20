@@ -14,6 +14,7 @@ const updateSchema = z.object({
   phone: z.string().min(6).optional(),
   villageArea: z.string().min(1).optional(),
   status: z.enum(["active", "inactive"]).optional(),
+  loginPhone: z.string().min(6, "Login phone must be at least 6 characters").optional(),
 });
 
 export async function createRiderHandler(req: Request, res: Response) {

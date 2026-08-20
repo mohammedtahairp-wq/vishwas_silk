@@ -5,6 +5,7 @@ export interface Rider {
   villageArea?: string | null;
   status: "active" | "inactive";
   createdAt: string;
+  loginPhone?: string | null;
 }
 
 export interface CreateRiderResult {

@@ -13,6 +13,7 @@ interface UpdateRiderInput {
   phone?: string;
   villageArea?: string;
   status?: "active" | "inactive";
+  loginPhone?: string;
 }
 
 export async function createRider(input: CreateRiderInput) {
@@ -31,8 +32,11 @@ export async function createRider(input: CreateRiderInput) {
   });
 }
 
-export function listRiders() {
-  return prisma.rider.findMany({ orderBy: { createdAt: "desc" } });
+export async function listRiders() {
+  const riders = await prisma.rider.findMany({ orderBy: { createdAt: "desc" } });
+  const users = await prisma.user.findMany({ where: { role: "rider" }, select: { linkedId: true, loginPhone: true } });
+  const loginMap = new Map(users.map((u) => [u.linkedId, u.loginPhone]));
+  return riders.map((r) => ({ ...r, loginPhone: loginMap.get(r.id) ?? null }));
 }
 
 export async function getRiderById(id: string) {
@@ -40,15 +44,26 @@ export async function getRiderById(id: string) {
   if (!rider) {
     throw new NotFoundError("Rider not found");
   }
-  return rider;
+  const user = await prisma.user.findFirst({ where: { linkedId: id, role: "rider" }, select: { loginPhone: true } });
+  return { ...rider, loginPhone: user?.loginPhone ?? null };
 }
 
 export async function updateRider(id: string, input: UpdateRiderInput) {
   await getRiderById(id);
   return prisma.$transaction(async (tx) => {
     const rider = await tx.rider.update({ where: { id }, data: input });
-    if (input.status) {
-      await tx.user.updateMany({ where: { linkedId: id, role: "rider" }, data: { status: input.status } });
+    if (input.status || input.loginPhone) {
+      const userData: { status?: "active" | "inactive"; loginPhone?: string } = {};
+      if (input.status) userData.status = input.status;
+      if (input.loginPhone) {
+        const trimmed = input.loginPhone.trim();
+        const existing = await tx.user.findUnique({ where: { loginPhone: trimmed } });
+        if (existing && existing.linkedId !== id) {
+          throw new ConflictError("That phone number is already in use for login");
+        }
+        userData.loginPhone = trimmed;
+      }
+      await tx.user.updateMany({ where: { linkedId: id, role: "rider" }, data: userData });
     }
     return rider;
   });
