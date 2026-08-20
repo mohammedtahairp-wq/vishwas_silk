@@ -26,6 +26,7 @@ const updateSchema = z.object({
   villageArea: z.string().optional(),
   serialNumber: serialNumberField,
   products: z.array(productPriceSchema).optional(),
+  loginPhone: z.string().min(6, "Login phone must be at least 6 characters").optional(),
 });
 
 const phoneSchema = z.object({

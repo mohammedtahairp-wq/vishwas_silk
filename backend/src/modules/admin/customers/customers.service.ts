@@ -25,6 +25,7 @@ interface UpdateCustomerInput {
   serialNumber?: string | null;
   products?: ProductPriceInput[];
   createdById?: string;
+  loginPhone?: string;
 }
 
 interface ListCustomersFilter {
@@ -139,7 +140,7 @@ async function customerLoginSet(customerIds: string[]): Promise<Set<string>> {
 
 export async function updateCustomer(id: string, input: UpdateCustomerInput) {
   await getCustomerById(id);
-  const { products, ...fields } = input;
+  const { products, loginPhone, ...fields } = input;
 
   if (input.serialNumber) {
     const withSameSerial = await prisma.customer.findUnique({ where: { serialNumber: input.serialNumber } });
@@ -148,25 +149,47 @@ export async function updateCustomer(id: string, input: UpdateCustomerInput) {
     }
   }
 
-  const customer = await prisma.customer.update({ where: { id }, data: fields });
+  return prisma.$transaction(async (tx) => {
+    const customer = await tx.customer.update({ where: { id }, data: fields });
 
-  if (products) {
-    const today = new Date().toISOString().slice(0, 10);
-    await prisma.customerProductPrice.deleteMany({ where: { customerId: id } });
-    if (products.length > 0) {
-      await prisma.customerProductPrice.createMany({
-        data: products.map((p) => ({
-          customerId: id,
-          productId: p.productId,
-          pricePerKg: p.pricePerKg,
-          effectiveFrom: p.effectiveFrom ? new Date(p.effectiveFrom) : new Date(today),
-          createdById: input.createdById ?? customer.createdById,
-        })),
-      });
+    if (products) {
+      const today = new Date().toISOString().slice(0, 10);
+      await tx.customerProductPrice.deleteMany({ where: { customerId: id } });
+      if (products.length > 0) {
+        await tx.customerProductPrice.createMany({
+          data: products.map((p) => ({
+            customerId: id,
+            productId: p.productId,
+            pricePerKg: p.pricePerKg,
+            effectiveFrom: p.effectiveFrom ? new Date(p.effectiveFrom) : new Date(today),
+            createdById: input.createdById ?? customer.createdById,
+          })),
+        });
+      }
     }
-  }
 
-  return customer;
+    if (loginPhone) {
+      const trimmed = loginPhone.trim();
+      const existing = await tx.user.findFirst({ where: { linkedId: id, role: "customer" } });
+      if (existing) {
+        if (trimmed !== existing.loginPhone) {
+          const taken = await tx.user.findUnique({ where: { loginPhone: trimmed } });
+          if (taken && taken.id !== existing.id) {
+            throw new ConflictError("That phone number is already in use for login");
+          }
+          await tx.user.update({ where: { id: existing.id }, data: { loginPhone: trimmed } });
+        }
+      } else {
+        const taken = await tx.user.findUnique({ where: { loginPhone: trimmed } });
+        if (taken) {
+          throw new ConflictError("That phone number is already in use for login");
+        }
+        await tx.user.create({ data: { loginPhone: trimmed, role: "customer", linkedId: id } });
+      }
+    }
+
+    return customer;
+  });
 }
 
 export async function setCustomerPhone(id: string, input: SetCustomerPhoneInput) {

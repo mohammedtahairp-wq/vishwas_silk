@@ -385,12 +385,10 @@ function EditCustomerModal({ customer, cities, products, onClose, onSaved }: { c
         address,
         villageArea: villageArea || undefined,
         products: validProducts.map((p) => ({ productId: p.productId, pricePerKg: Number(p.pricePerKg) })),
+        loginPhone: loginPhone.trim() || undefined,
       });
       if (status !== customer.status) {
         await adminApi.setCustomerStatus(customer.id, status);
-      }
-      if (loginPhone.trim()) {
-        await adminApi.setCustomerLogin(customer.id, { loginPhone: loginPhone.trim() });
       }
       onSaved();
     } catch (err) {

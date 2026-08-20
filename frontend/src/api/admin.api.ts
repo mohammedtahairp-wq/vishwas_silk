@@ -14,7 +14,7 @@ export const adminApi = {
   listCustomers: (params?: { rider_id?: string; status?: string }) =>
     apiClient.get<Customer[]>("/admin/customers", { params }).then((r) => r.data),
   getCustomer: (id: string) => apiClient.get<Customer>(`/admin/customers/${id}`).then((r) => r.data),
-  updateCustomer: (id: string, data: Partial<Customer> & { products?: { productId: string; pricePerKg: number; effectiveFrom?: string }[] }) =>
+  updateCustomer: (id: string, data: Partial<Customer> & { products?: { productId: string; pricePerKg: number; effectiveFrom?: string }[]; loginPhone?: string }) =>
     apiClient.put<Customer>(`/admin/customers/${id}`, data).then((r) => r.data),
   deleteCustomer: (id: string) => apiClient.delete(`/admin/customers/${id}`).then((r) => r.data),
   assignRider: (id: string, riderId: string | null) =>
