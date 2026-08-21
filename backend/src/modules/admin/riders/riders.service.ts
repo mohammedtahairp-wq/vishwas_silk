@@ -1,5 +1,6 @@
 import { prisma } from "../../../lib/prisma";
 import { ConflictError, NotFoundError } from "../../../lib/errors";
+import { normalizeLoginPhone } from "../../../lib/phone";
 
 interface CreateRiderInput {
   name: string;
@@ -17,7 +18,7 @@ interface UpdateRiderInput {
 }
 
 export async function createRider(input: CreateRiderInput) {
-  const loginPhone = input.loginPhone.trim();
+  const loginPhone = normalizeLoginPhone(input.loginPhone);
   const existingUser = await prisma.user.findUnique({ where: { loginPhone } });
   if (existingUser) throw new ConflictError("That phone number is already in use for login");
 
@@ -49,19 +50,30 @@ export async function getRiderById(id: string) {
 }
 
 export async function updateRider(id: string, input: UpdateRiderInput) {
-  await getRiderById(id);
+  const current = await getRiderById(id);
+
+  // When the contact phone changed and no explicit loginPhone was sent,
+  // the rider's login follows the new phone so they can sign in immediately.
+  let desiredLoginPhone: string | undefined;
+  if (typeof input.loginPhone === "string" && input.loginPhone.trim()) {
+    desiredLoginPhone = normalizeLoginPhone(input.loginPhone);
+  } else if (input.phone && input.phone !== current.phone) {
+    desiredLoginPhone = normalizeLoginPhone(input.phone);
+  }
+
+  const { loginPhone: _ignored, ...riderFields } = input;
+
   return prisma.$transaction(async (tx) => {
-    const rider = await tx.rider.update({ where: { id }, data: input });
-    if (input.status || input.loginPhone) {
+    const rider = await tx.rider.update({ where: { id }, data: riderFields });
+    if (input.status || desiredLoginPhone) {
       const userData: { status?: "active" | "inactive"; loginPhone?: string } = {};
       if (input.status) userData.status = input.status;
-      if (input.loginPhone) {
-        const trimmed = input.loginPhone.trim();
-        const existing = await tx.user.findUnique({ where: { loginPhone: trimmed } });
+      if (desiredLoginPhone) {
+        const existing = await tx.user.findUnique({ where: { loginPhone: desiredLoginPhone } });
         if (existing && existing.linkedId !== id) {
           throw new ConflictError("That phone number is already in use for login");
         }
-        userData.loginPhone = trimmed;
+        userData.loginPhone = desiredLoginPhone;
       }
       await tx.user.updateMany({ where: { linkedId: id, role: "rider" }, data: userData });
     }

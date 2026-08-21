@@ -2,6 +2,7 @@ import jwt from "jsonwebtoken";
 import { prisma } from "../../lib/prisma";
 import { env } from "../../config/env";
 import { NotFoundError, BadRequestError, UnauthorizedError } from "../../lib/errors";
+import { normalizeLoginPhone } from "../../lib/phone";
 
 function base64UrlDecode(segment: string): string {
   const b64 = segment.replace(/-/g, "+").replace(/_/g, "/");
@@ -21,7 +22,7 @@ function isValidWidgetToken(widgetToken: string): boolean {
 }
 
 export async function checkPhoneRegistered(phone: string): Promise<boolean> {
-  const user = await prisma.user.findUnique({ where: { loginPhone: phone } });
+  const user = await prisma.user.findUnique({ where: { loginPhone: normalizeLoginPhone(phone) } });
   return !!(user && user.status === "active");
 }
 
@@ -36,7 +37,7 @@ export async function verifyTokenAndLogin(widgetToken: string, phone: string) {
     throw new UnauthorizedError("Token does not belong to this account.");
   }
 
-  const user = await prisma.user.findUnique({ where: { loginPhone: phone } });
+  const user = await prisma.user.findUnique({ where: { loginPhone: normalizeLoginPhone(phone) } });
   if (!user || user.status !== "active") {
     throw new NotFoundError("User not found");
   }

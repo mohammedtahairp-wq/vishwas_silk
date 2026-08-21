@@ -161,7 +161,7 @@ function EditRiderModal({ rider, cities, onClose, onSaved }: { rider: Rider; cit
   const [phone, setPhone] = useState(rider.phone);
   const [villageArea, setVillageArea] = useState(rider.villageArea ?? "");
   const [status, setStatus] = useState<Rider["status"]>(rider.status);
-  const [loginPhone, setLoginPhone] = useState(rider.loginPhone ?? "");
+  const [loginPhone, setLoginPhone] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -196,9 +196,13 @@ function EditRiderModal({ rider, cities, onClose, onSaved }: { rider: Rider; cit
             <option value="inactive">Inactive</option>
           </select>
         </Field>
-        <Field label="Login Phone">
-          <input className="w-full border border-gray-300 rounded px-2 py-1.5" value={loginPhone} onChange={(e) => setLoginPhone(e.target.value)} required />
-        </Field>
+        <div>
+          <label className="block text-xs font-medium text-gray-600 mb-1">
+            Login Phone {rider.loginPhone ? <span className="text-emerald-600 font-normal">(current: {rider.loginPhone})</span> : null}
+          </label>
+          <p className="mb-2 text-xs text-gray-400">Leave blank to use the Phone above for OTP login.</p>
+          <input className="w-full border border-gray-300 rounded px-2 py-1.5" value={loginPhone} onChange={(e) => setLoginPhone(e.target.value)} placeholder="Same as Phone unless changed" />
+        </div>
         {error && <p className="text-sm text-red-600">{error}</p>}
         <div className="flex justify-end gap-2 pt-2">
           <button type="button" onClick={onClose} className="rounded px-4 py-1.5 text-gray-600 hover:bg-gray-100">

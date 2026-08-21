@@ -430,16 +430,16 @@ function EditCustomerModal({ customer, cities, products, onClose, onSaved }: { c
           <label className="text-xs font-semibold text-gray-700">
             Login phone{" "}
             {currentLoginPhone ? (
-              <span className="font-normal text-emerald-600">(current: {currentLoginPhone} — fill below to change)</span>
+              <span className="font-normal text-emerald-600">(current: {currentLoginPhone})</span>
             ) : (
               <span className="font-normal text-gray-400">(not set yet)</span>
             )}
           </label>
-          {!currentLoginPhone && (
-            <p className="mb-2 text-xs text-gray-400">Set a phone number so this customer can log in with OTP.</p>
-          )}
+          <p className="mb-2 text-xs text-gray-400">
+            Leave blank to use the Phone above for OTP login — changing the customer's phone updates their login automatically.
+          </p>
           <input
-            placeholder="Login phone number"
+            placeholder="Same as Phone unless changed"
             className="w-full border border-gray-300 rounded px-2 py-1.5 mt-1"
             value={loginPhone}
             onChange={(e) => setLoginPhone(e.target.value)}

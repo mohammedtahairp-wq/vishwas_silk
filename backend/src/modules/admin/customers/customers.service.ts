@@ -1,5 +1,6 @@
 import { prisma } from "../../../lib/prisma";
 import { BadRequestError, ConflictError, ForbiddenError, NotFoundError } from "../../../lib/errors";
+import { normalizeLoginPhone } from "../../../lib/phone";
 
 interface ProductPriceInput {
   productId: string;
@@ -51,12 +52,11 @@ export async function createCustomer(input: CreateCustomerInput) {
   const serialNumber = await generateSerialNumber(input.villageArea);
   const today = new Date().toISOString().slice(0, 10);
 
-  let loginPhone: string | undefined;
-  if (input.loginPhone) {
-    loginPhone = input.loginPhone.trim();
-    const existingUser = await prisma.user.findUnique({ where: { loginPhone } });
-    if (existingUser) throw new ConflictError("That phone number is already in use for login");
-  }
+  // Login phone defaults to the customer's contact phone so every new
+  // customer can sign in with OTP immediately.
+  const loginPhone = normalizeLoginPhone(input.loginPhone?.trim() || input.phone);
+  const existingUser = await prisma.user.findUnique({ where: { loginPhone } });
+  if (existingUser) throw new ConflictError("That phone number is already in use for login");
 
   return prisma.$transaction(async (tx) => {
     const customer = await tx.customer.create({
@@ -91,7 +91,6 @@ export async function createCustomer(input: CreateCustomerInput) {
     return { customer, loginPhone: loginPhone ?? null };
   });
 }
-
 export async function listCustomers(filter: ListCustomersFilter) {
   const customers = await prisma.customer.findMany({
     where: {
@@ -139,7 +138,7 @@ async function customerLoginSet(customerIds: string[]): Promise<Set<string>> {
 }
 
 export async function updateCustomer(id: string, input: UpdateCustomerInput) {
-  await getCustomerById(id);
+  const current = await getCustomerById(id);
   const { products, loginPhone, ...fields } = input;
 
   if (input.serialNumber) {
@@ -147,6 +146,17 @@ export async function updateCustomer(id: string, input: UpdateCustomerInput) {
     if (withSameSerial && withSameSerial.id !== id) {
       throw new ConflictError("That serial number is already in use by another customer");
     }
+  }
+
+  // Decide which login phone should be in effect after this update:
+  // - an explicit loginPhone always wins (normalized),
+  // - otherwise, when the contact phone changed, the login follows the new
+  //   phone so the customer can sign in with it immediately.
+  let desiredLoginPhone: string | undefined;
+  if (typeof loginPhone === "string" && loginPhone.trim()) {
+    desiredLoginPhone = normalizeLoginPhone(loginPhone);
+  } else if (fields.phone && fields.phone !== current.phone) {
+    desiredLoginPhone = normalizeLoginPhone(fields.phone);
   }
 
   return prisma.$transaction(async (tx) => {
@@ -168,23 +178,22 @@ export async function updateCustomer(id: string, input: UpdateCustomerInput) {
       }
     }
 
-    if (loginPhone) {
-      const trimmed = loginPhone.trim();
+    if (desiredLoginPhone) {
       const existing = await tx.user.findFirst({ where: { linkedId: id, role: "customer" } });
       if (existing) {
-        if (trimmed !== existing.loginPhone) {
-          const taken = await tx.user.findUnique({ where: { loginPhone: trimmed } });
+        if (desiredLoginPhone !== existing.loginPhone) {
+          const taken = await tx.user.findUnique({ where: { loginPhone: desiredLoginPhone } });
           if (taken && taken.id !== existing.id) {
             throw new ConflictError("That phone number is already in use for login");
           }
-          await tx.user.update({ where: { id: existing.id }, data: { loginPhone: trimmed } });
+          await tx.user.update({ where: { id: existing.id }, data: { loginPhone: desiredLoginPhone } });
         }
       } else {
-        const taken = await tx.user.findUnique({ where: { loginPhone: trimmed } });
+        const taken = await tx.user.findUnique({ where: { loginPhone: desiredLoginPhone } });
         if (taken) {
           throw new ConflictError("That phone number is already in use for login");
         }
-        await tx.user.create({ data: { loginPhone: trimmed, role: "customer", linkedId: id } });
+        await tx.user.create({ data: { loginPhone: desiredLoginPhone, role: "customer", linkedId: id } });
       }
     }
 
@@ -195,7 +204,7 @@ export async function updateCustomer(id: string, input: UpdateCustomerInput) {
 export async function setCustomerPhone(id: string, input: SetCustomerPhoneInput) {
   await getCustomerById(id);
 
-  const loginPhone = input.loginPhone.trim();
+  const loginPhone = normalizeLoginPhone(input.loginPhone);
 
   const existingUser = await prisma.user.findFirst({
     where: { linkedId: id, role: "customer" },
