@@ -12,6 +12,7 @@ const navItems = [
   { to: "/admin/pickups", label: "Pickups" },
   { to: "/admin/grand-total", label: "Grand Total" },
   { to: "/admin/settlements", label: "Settlements" },
+  { to: "/admin/operations", label: "Operations" },
 ];
 
 export function AdminLayout() {

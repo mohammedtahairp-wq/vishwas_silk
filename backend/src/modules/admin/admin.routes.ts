@@ -8,6 +8,7 @@ import { pricingRouter } from "./pricing/pricing.routes";
 import { pickupsRouter } from "./pickups/pickups.routes";
 import { settlementsRouter } from "./settlements/settlements.routes";
 import { citiesRouter } from "./cities/cities.routes";
+import { operationsRouter } from "./operations/operations.routes";
 
 export const adminRouter = Router();
 
@@ -20,3 +21,4 @@ adminRouter.use("/products", productsRouter);
 adminRouter.use("/pricing", pricingRouter);
 adminRouter.use("/pickups", pickupsRouter);
 adminRouter.use("/settlements", settlementsRouter);
+adminRouter.use("/operations", operationsRouter);

@@ -157,3 +157,125 @@ export interface PaidSettlementEntry {
   totalKg: number;
   totalAmount: number;
 }
+
+// ---- Phase 2: Operations ----
+
+export type EmployeeCategory = "sheet_machine" | "ovendry" | "khalla_jala" | "drivers_helpers";
+
+export const EMPLOYEE_CATEGORY_LABELS: Record<EmployeeCategory, string> = {
+  sheet_machine: "Sheet Machine",
+  ovendry: "Oven Dry",
+  khalla_jala: "Khalla & Jala",
+  drivers_helpers: "Drivers & Helpers",
+};
+
+export interface Employee {
+  id: string;
+  name: string;
+  phone?: string | null;
+  category: EmployeeCategory;
+  monthlySalary: string;
+  status: "active" | "inactive";
+  createdAt: string;
+}
+
+export type SalaryPaymentType = "advance" | "salary";
+
+export interface SalaryPayment {
+  id: string;
+  employeeId: string;
+  type: SalaryPaymentType;
+  amount: string;
+  month: number;
+  year: number;
+  paymentDate: string;
+  note?: string | null;
+  employee?: { name: string; category: EmployeeCategory };
+}
+
+export interface SalarySummaryRow {
+  employeeId: string;
+  name: string;
+  phone: string | null;
+  category: EmployeeCategory;
+  status: "active" | "inactive";
+  monthlySalary: number;
+  advanceTotal: number;
+  salaryPaidTotal: number;
+  totalPaid: number;
+  remaining: number;
+}
+
+export interface SalaryMonthSummary {
+  month: number;
+  year: number;
+  rows: SalarySummaryRow[];
+  grandTotals: {
+    monthlySalary: number;
+    advanceTotal: number;
+    salaryPaidTotal: number;
+    remaining: number;
+  };
+}
+
+export interface Vehicle {
+  id: string;
+  name: string;
+  number: string;
+  status: "active" | "inactive";
+  createdAt: string;
+}
+
+export type TransportExpenseCategory = "diesel" | "repair";
+
+export const TRANSPORT_CATEGORY_LABELS: Record<TransportExpenseCategory, string> = {
+  diesel: "Diesel",
+  repair: "Repair",
+};
+
+export interface TransportExpense {
+  id: string;
+  vehicleId: string;
+  category: TransportExpenseCategory;
+  amount: string;
+  expenseDate: string;
+  description?: string | null;
+  vehicle?: { name: string; number: string };
+}
+
+export interface TransportSummary {
+  dieselTotal: number;
+  repairTotal: number;
+  grandTotal: number;
+  byVehicle: {
+    vehicleId: string;
+    vehicleName: string;
+    vehicleNumber: string;
+    dieselTotal: number;
+    repairTotal: number;
+    total: number;
+  }[];
+}
+
+export type MaintenanceExpenseCategory = "food" | "machinery" | "others";
+
+export const MAINTENANCE_CATEGORY_LABELS: Record<MaintenanceExpenseCategory, string> = {
+  food: "Food",
+  machinery: "Machinery",
+  others: "Others",
+};
+
+export interface MaintenanceExpense {
+  id: string;
+  category: MaintenanceExpenseCategory;
+  amount: string;
+  expenseDate: string;
+  description: string;
+}
+
+export interface MaintenanceSummary {
+  foodTotal: number;
+  machineryTotal: number;
+  othersTotal: number;
+  grandTotal: number;
+}

@@ -29,6 +29,29 @@ enum TransactionStatus {
   paid
 }
 
+enum EmployeeCategory {
+  sheet_machine
+  ovendry
+  khalla_jala
+  drivers_helpers
+}
+
+enum SalaryPaymentType {
+  advance
+  salary
+}
+
+enum TransportExpenseCategory {
+  diesel
+  repair
+}
+
+enum MaintenanceExpenseCategory {
+  food
+  machinery
+  others
+}
+
 model User {
   id           String   @id @default(uuid())
   loginPhone   String?  @unique @map("login_phone")
@@ -42,6 +65,9 @@ model User {
   createdCustomers    Customer[]             @relation("CustomerCreatedBy")
   createdPrices       CustomerProductPrice[]
   createdTransactions Transaction[]
+  createdSalaries     SalaryPayment[]        @relation("SalaryPaymentCreatedBy")
+  createdTransport    TransportExpense[]     @relation("TransportExpenseCreatedBy")
+  createdMaintenance  MaintenanceExpense[]   @relation("MaintenanceExpenseCreatedBy")
 
   @@map("users")
 }
@@ -182,4 +208,85 @@ model TransactionLineItem {
   product     Product     @relation(fields: [productId], references: [id])
 
   @@map("transaction_line_items")
+}
+
+// ---- Phase 2: Operations (salary / transport / maintenance) ----
+
+model Employee {
+  id            String           @id @default(uuid())
+  name          String
+  phone         String?
+  category      EmployeeCategory
+  monthlySalary Decimal          @map("monthly_salary") @db.Decimal(12, 2)
+  status        Status           @default(active)
+  createdAt     DateTime         @default(now()) @map("created_at")
+
+  salaryPayments SalaryPayment[]
+
+  @@index([category])
+  @@map("employees")
+}
+
+model SalaryPayment {
+  id          String            @id @default(uuid())
+  employeeId  String            @map("employee_id")
+  type        SalaryPaymentType
+  amount      Decimal           @db.Decimal(12, 2)
+  month       Int
+  year        Int
+  paymentDate DateTime          @default(now()) @map("payment_date") @db.Date
+  note        String?
+  createdById String            @map("created_by")
+  createdAt   DateTime          @default(now()) @map("created_at")
+
+  employee  Employee @relation(fields: [employeeId], references: [id])
+  createdBy User     @relation("SalaryPaymentCreatedBy", fields: [createdById], references: [id])
+
+  @@index([employeeId, year, month])
+  @@map("salary_payments")
+}
+
+model Vehicle {
+  id        String   @id @default(uuid())
+  name      String
+  number    String   @unique
+  status    Status   @default(active)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  transportExpenses TransportExpense[]
+
+  @@map("vehicles")
+}
+
+model TransportExpense {
+  id          String                   @id @default(uuid())
+  vehicleId   String                   @map("vehicle_id")
+  category    TransportExpenseCategory
+  amount      Decimal                  @db.Decimal(12, 2)
+  expenseDate DateTime                 @default(now()) @map("expense_date") @db.Date
+  description String?
+  createdById String                   @map("created_by")
+  createdAt   DateTime                 @default(now()) @map("created_at")
+
+  vehicle   Vehicle @relation(fields: [vehicleId], references: [id])
+  createdBy User    @relation("TransportExpenseCreatedBy", fields: [createdById], references: [id])
+
+  @@index([vehicleId, expenseDate])
+  @@index([expenseDate])
+  @@map("transport_expenses")
+}
+
+model MaintenanceExpense {
+  id          String                      @id @default(uuid())
+  category    MaintenanceExpenseCategory
+  amount      Decimal                     @db.Decimal(12, 2)
+  expenseDate DateTime                    @default(now()) @map("expense_date") @db.Date
+  description String
+  createdById String                      @map("created_by")
+  createdAt   DateTime                    @default(now()) @map("created_at")
+
+  createdBy User @relation("MaintenanceExpenseCreatedBy", fields: [createdById], references: [id])
+
+  @@index([expenseDate])
+  @@map("maintenance_expenses")
 }

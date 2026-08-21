@@ -1,5 +1,26 @@
 import { apiClient } from "./client";
-import type { City, CreateCustomerResult, CreateRiderResult, Customer, PaidSettlementEntry, PickupAdmin, Price, Product, Rider, SettlementPreview, SettlementSummary, Transaction } from "./types";
+import type {
+  City,
+  CreateCustomerResult,
+  CreateRiderResult,
+  Customer,
+  Employee,
+  MaintenanceExpense,
+  MaintenanceSummary,
+  PaidSettlementEntry,
+  PickupAdmin,
+  Price,
+  Product,
+  Rider,
+  SalaryMonthSummary,
+  SalaryPayment,
+  SettlementPreview,
+  SettlementSummary,
+  Transaction,
+  TransportExpense,
+  TransportSummary,
+  Vehicle,
+} from "./types";
 
 export const adminApi = {
   // Cities
@@ -70,4 +91,71 @@ export const adminApi = {
     apiClient.post<{ updatedCount: number }>("/admin/settlements/mark-bulk-paid", data).then((r) => r.data),
   paidSettlementsSummary: (params?: { customer_id?: string; product_id?: string; city_id?: string; from_date?: string; to_date?: string }) =>
     apiClient.get<PaidSettlementEntry[]>("/admin/settlements/paid-summary", { params }).then((r) => r.data),
+
+  // ---- Operations: Salaries ----
+  createEmployee: (data: { name: string; phone?: string; category: string; monthlySalary: number }) =>
+    apiClient.post<Employee>("/admin/operations/salaries/employees", data).then((r) => r.data),
+  listEmployees: (params?: { category?: string }) =>
+    apiClient.get<Employee[]>("/admin/operations/salaries/employees", { params }).then((r) => r.data),
+  updateEmployee: (id: string, data: { name?: string; phone?: string | null; category?: string; monthlySalary?: number; status?: "active" | "inactive" }) =>
+    apiClient.put<Employee>(`/admin/operations/salaries/employees/${id}`, data).then((r) => r.data),
+  deleteEmployee: (id: string) =>
+    apiClient.delete(`/admin/operations/salaries/employees/${id}`).then((r) => r.data),
+
+  salarySummary: (params: { month: number; year: number }) =>
+    apiClient.get<SalaryMonthSummary>("/admin/operations/salaries/summary", { params }).then((r) => r.data),
+  recordSalaryPayment: (data: {
+    employee_id: string;
+    type: "advance" | "salary";
+    amount: number;
+    month: number;
+    year: number;
+    payment_date?: string;
+    note?: string;
+  }) =>
+    apiClient.post<SalaryPayment>("/admin/operations/salaries/payments", data).then((r) => r.data),
+  listSalaryPayments: (params?: { employee_id?: string; month?: number; year?: number; type?: "advance" | "salary" }) =>
+    apiClient.get<SalaryPayment[]>("/admin/operations/salaries/payments", { params }).then((r) => r.data),
+  deleteSalaryPayment: (id: string) =>
+    apiClient.delete(`/admin/operations/salaries/payments/${id}`).then((r) => r.data),
+
+  // ---- Operations: Transport ----
+  createVehicle: (data: { name: string; number: string }) =>
+    apiClient.post<Vehicle>("/admin/operations/transport/vehicles", data).then((r) => r.data),
+  listVehicles: () =>
+    apiClient.get<Vehicle[]>("/admin/operations/transport/vehicles").then((r) => r.data),
+  updateVehicle: (id: string, data: { name?: string; number?: string; status?: "active" | "inactive" }) =>
+    apiClient.put<Vehicle>(`/admin/operations/transport/vehicles/${id}`, data).then((r) => r.data),
+  deleteVehicle: (id: string) =>
+    apiClient.delete(`/admin/operations/transport/vehicles/${id}`).then((r) => r.data),
+
+  createTransportExpense: (data: {
+    vehicle_id: string;
+    category: "diesel" | "repair";
+    amount: number;
+    expense_date: string;
+    description?: string;
+  }) =>
+    apiClient.post<TransportExpense>("/admin/operations/transport/expenses", data).then((r) => r.data),
+  listTransportExpenses: (params?: { vehicle_id?: string; category?: "diesel" | "repair"; from?: string; to?: string }) =>
+    apiClient.get<TransportExpense[]>("/admin/operations/transport/expenses", { params }).then((r) => r.data),
+  deleteTransportExpense: (id: string) =>
+    apiClient.delete(`/admin/operations/transport/expenses/${id}`).then((r) => r.data),
+  transportSummary: (params?: { from?: string; to?: string }) =>
+    apiClient.get<TransportSummary>("/admin/operations/transport/expenses/summary", { params }).then((r) => r.data),
+
+  // ---- Operations: Maintenance ----
+  createMaintenanceExpense: (data: {
+    category: "food" | "machinery" | "others";
+    amount: number;
+    expense_date: string;
+    description: string;
+  }) =>
+    apiClient.post<MaintenanceExpense>("/admin/operations/maintenance/expenses", data).then((r) => r.data),
+  listMaintenanceExpenses: (params?: { category?: "food" | "machinery" | "others"; from?: string; to?: string }) =>
+    apiClient.get<MaintenanceExpense[]>("/admin/operations/maintenance/expenses", { params }).then((r) => r.data),
+  deleteMaintenanceExpense: (id: string) =>
+    apiClient.delete(`/admin/operations/maintenance/expenses/${id}`).then((r) => r.data),
+  maintenanceSummary: (params?: { from?: string; to?: string }) =>
+    apiClient.get<MaintenanceSummary>("/admin/operations/maintenance/expenses/summary", { params }).then((r) => r.data),
 };
