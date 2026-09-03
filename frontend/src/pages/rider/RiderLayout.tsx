@@ -3,6 +3,7 @@ import { PortalLayout } from "../../components/PortalLayout";
 const navItems = [
   { to: "/rider/customers", label: "My Customers" },
   { to: "/rider/log-pickup", label: "Log Pickup" },
+  { to: "/rider/diesel", label: "Diesel Fill" },
   { to: "/rider/history", label: "Customer Product History" },
 ];
 

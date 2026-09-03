@@ -295,3 +295,17 @@ export interface MaintenanceSummary {
   othersTotal: number;
   grandTotal: number;
 }
+
+export interface DieselLog {
+  id: string;
+  vehicleId: string;
+  riderId: string;
+  unit: Unit;
+  dieselDate: string;
+  dieselAmount: string;
+  startKm: string;
+  endKm: string;
+  kmRun: string;
+  createdAt: string;
+  vehicle?: { name: string; number: string };
+}

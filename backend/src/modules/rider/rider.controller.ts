@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { z } from "zod";
 import { prisma } from "../../lib/prisma";
 import * as pickupsService from "../admin/pickups/pickups.service";
+import * as dieselService from "./diesel.service";
 import { assertCustomerBelongsToRider } from "../admin/customers/customers.service";
 import { serializePickups } from "../../serializers/pickup.serializer";
 import { ForbiddenError } from "../../lib/errors";
@@ -155,4 +156,70 @@ export async function priceAvailabilityHandler(req: Request, res: Response) {
   const query = z.object({ customer_id: z.string().uuid(), product_id: z.string().uuid() }).parse(req.query);
   await assertCustomerBelongsToRider(query.customer_id, req.user!.linkedId!);
   res.json({ available: await pickupsService.priceAvailable(query.customer_id, query.product_id) });
+}
+
+const dieselLogSchema = z.object({
+  vehicle_id: z.string().uuid(),
+  diesel_date: z
+    .string()
+    .refine((v) => !Number.isNaN(Date.parse(v)), "Invalid date")
+    .optional(),
+  diesel_amount: z.number().positive(),
+  start_km: z.number().nonnegative(),
+  end_km: z.number().nonnegative(),
+});
+
+const updateDieselLogSchema = z.object({
+  vehicle_id: z.string().uuid().optional(),
+  diesel_date: z
+    .string()
+    .refine((v) => !Number.isNaN(Date.parse(v)), "Invalid date")
+    .optional(),
+  diesel_amount: z.number().positive().optional(),
+  start_km: z.number().nonnegative().optional(),
+  end_km: z.number().nonnegative().optional(),
+});
+
+export async function riderVehiclesHandler(req: Request, res: Response) {
+  res.json(await dieselService.listActiveVehicles());
+}
+
+export async function createDieselLogHandler(req: Request, res: Response) {
+  const body = dieselLogSchema.parse(req.body);
+  const log = await dieselService.createDieselLog({
+    vehicleId: body.vehicle_id,
+    riderId: req.user!.linkedId!,
+    dieselDate: body.diesel_date ? new Date(body.diesel_date) : new Date(),
+    dieselAmount: body.diesel_amount,
+    startKm: body.start_km,
+    endKm: body.end_km,
+    createdById: req.user!.id,
+  });
+  res.status(201).json(log);
+}
+
+export async function listDieselLogsHandler(req: Request, res: Response) {
+  const { from, to } = req.query;
+  const logs = await dieselService.listDieselLogs(req.user!.linkedId!, {
+    from: typeof from === "string" && !Number.isNaN(Date.parse(from)) ? new Date(from) : undefined,
+    to: typeof to === "string" && !Number.isNaN(Date.parse(to)) ? new Date(to) : undefined,
+  });
+  res.json(logs);
+}
+
+export async function updateOwnDieselLogHandler(req: Request, res: Response) {
+  const body = updateDieselLogSchema.parse(req.body);
+  const log = await dieselService.updateOwnDieselLog(req.params.id, req.user!.linkedId!, {
+    vehicleId: body.vehicle_id,
+    dieselDate: body.diesel_date ? new Date(body.diesel_date) : undefined,
+    dieselAmount: body.diesel_amount,
+    startKm: body.start_km,
+    endKm: body.end_km,
+  });
+  res.json(log);
+}
+
+export async function deleteOwnDieselLogHandler(req: Request, res: Response) {
+  await dieselService.deleteOwnDieselLog(req.params.id, req.user!.linkedId!);
+  res.status(204).end();
 }

@@ -2,7 +2,7 @@ import { Router } from "express";
 import { asyncHandler } from "../../lib/asyncHandler";
 import { authenticate } from "../../middleware/auth";
 import { requireRole } from "../../middleware/requireRole";
-import { createPickupHandler, myCustomersHandler, myPickupsHandler, priceAvailabilityHandler, customerProductsHandler, createBatchPickupHandler, updateOwnPickupHandler, deleteOwnPickupHandler } from "./rider.controller";
+import { createPickupHandler, myCustomersHandler, myPickupsHandler, priceAvailabilityHandler, customerProductsHandler, createBatchPickupHandler, updateOwnPickupHandler, deleteOwnPickupHandler, riderVehiclesHandler, createDieselLogHandler, listDieselLogsHandler, updateOwnDieselLogHandler, deleteOwnDieselLogHandler } from "./rider.controller";
 
 export const riderRouter = Router();
 
@@ -16,3 +16,8 @@ riderRouter.get("/pickups", asyncHandler(myPickupsHandler));
 riderRouter.put("/pickups/:id", asyncHandler(updateOwnPickupHandler));
 riderRouter.delete("/pickups/:id", asyncHandler(deleteOwnPickupHandler));
 riderRouter.get("/price-availability", asyncHandler(priceAvailabilityHandler));
+riderRouter.get("/diesel/vehicles", asyncHandler(riderVehiclesHandler));
+riderRouter.get("/diesel/logs", asyncHandler(listDieselLogsHandler));
+riderRouter.post("/diesel/logs", asyncHandler(createDieselLogHandler));
+riderRouter.put("/diesel/logs/:id", asyncHandler(updateOwnDieselLogHandler));
+riderRouter.delete("/diesel/logs/:id", asyncHandler(deleteOwnDieselLogHandler));

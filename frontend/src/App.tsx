@@ -27,6 +27,7 @@ import { RiderLayout } from "./pages/rider/RiderLayout";
 import { MyCustomersPage } from "./pages/rider/MyCustomersPage";
 import { LogPickupPage } from "./pages/rider/LogPickupPage";
 import { MyPickupHistoryPage } from "./pages/rider/MyPickupHistoryPage";
+import { DieselFillPage } from "./pages/rider/DieselFillPage";
 
 import { CustomerLayout } from "./pages/customer/CustomerLayout";
 import { MyProfilePage } from "./pages/customer/MyProfilePage";
@@ -76,6 +77,7 @@ export default function App() {
               <Route path="customers" element={<MyCustomersPage />} />
               <Route path="log-pickup" element={<LogPickupPage />} />
               <Route path="history" element={<MyPickupHistoryPage />} />
+              <Route path="diesel" element={<DieselFillPage />} />
             </Route>
           </Route>
 

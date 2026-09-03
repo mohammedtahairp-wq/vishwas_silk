@@ -74,6 +74,7 @@ model User {
   createdSalaries     SalaryPayment[]        @relation("SalaryPaymentCreatedBy")
   createdTransport    TransportExpense[]     @relation("TransportExpenseCreatedBy")
   createdMaintenance  MaintenanceExpense[]   @relation("MaintenanceExpenseCreatedBy")
+  createdDieselLogs   DieselLog[]            @relation("DieselLogCreatedBy")
 
   @@map("users")
 }
@@ -112,6 +113,7 @@ model Rider {
 
   customers Customer[]
   pickups   Pickup[]
+  dieselLogs DieselLog[]
 
   @@map("riders")
 }
@@ -265,6 +267,7 @@ model Vehicle {
   createdAt DateTime @default(now()) @map("created_at")
 
   transportExpenses TransportExpense[]
+  dieselLogs        DieselLog[]
 
   @@index([unit])
   @@map("vehicles")
@@ -305,4 +308,29 @@ model MaintenanceExpense {
   @@index([expenseDate])
   @@index([unit, expenseDate])
   @@map("maintenance_expenses")
+}
+
+// Rider diesel fill log with KM readings (start km before fill, end km after run).
+model DieselLog {
+  id           String   @id @default(uuid())
+  vehicleId    String   @map("vehicle_id")
+  riderId      String   @map("rider_id")
+  unit         Unit     @default(kolar)
+  dieselDate   DateTime @map("diesel_date") @db.Date
+  dieselAmount Decimal  @map("diesel_amount") @db.Decimal(12, 2)
+  startKm      Decimal  @map("start_km") @db.Decimal(10, 2)
+  endKm        Decimal  @map("end_km") @db.Decimal(10, 2)
+  // km run = endKm - startKm, precomputed in the service for reporting.
+  kmRun        Decimal  @map("km_run") @db.Decimal(10, 2)
+  createdById  String   @map("created_by")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  vehicle   Vehicle @relation(fields: [vehicleId], references: [id])
+  rider     Rider   @relation(fields: [riderId], references: [id])
+  createdBy User    @relation("DieselLogCreatedBy", fields: [createdById], references: [id])
+
+  @@index([vehicleId, dieselDate])
+  @@index([riderId, dieselDate])
+  @@index([unit, dieselDate])
+  @@map("diesel_logs")
 }

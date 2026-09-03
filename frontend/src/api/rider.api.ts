@@ -1,5 +1,5 @@
 import { apiClient } from "./client";
-import type { Customer, CustomerProduct, PickupSafe } from "./types";
+import type { Customer, CustomerProduct, DieselLog, PickupSafe, Vehicle } from "./types";
 
 export const riderApi = {
   myCustomers: () => apiClient.get<Customer[]>("/rider/customers").then((r) => r.data),
@@ -15,4 +15,12 @@ export const riderApi = {
   deletePickup: (id: string) => apiClient.delete(`/rider/pickups/${id}`).then((r) => r.data),
   priceAvailability: (customerId: string, productId: string) =>
     apiClient.get<{ available: boolean }>("/rider/price-availability", { params: { customer_id: customerId, product_id: productId } }).then((r) => r.data.available),
+  dieselVehicles: () => apiClient.get<Vehicle[]>("/rider/diesel/vehicles").then((r) => r.data),
+  dieselLogs: (params?: { from?: string; to?: string }) =>
+    apiClient.get<DieselLog[]>("/rider/diesel/logs", { params }).then((r) => r.data),
+  createDieselLog: (data: { vehicle_id: string; diesel_date?: string; diesel_amount: number; start_km: number; end_km: number }) =>
+    apiClient.post<DieselLog>("/rider/diesel/logs", data).then((r) => r.data),
+  updateDieselLog: (id: string, data: { vehicle_id?: string; diesel_date?: string; diesel_amount?: number; start_km?: number; end_km?: number }) =>
+    apiClient.put<DieselLog>(`/rider/diesel/logs/${id}`, data).then((r) => r.data),
+  deleteDieselLog: (id: string) => apiClient.delete(`/rider/diesel/logs/${id}`).then((r) => r.data),
 };
