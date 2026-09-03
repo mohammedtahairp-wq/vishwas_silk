@@ -3,6 +3,7 @@ import { z } from "zod";
 import * as maintenanceService from "./maintenance.service";
 
 const maintenanceCategorySchema = z.enum(["food", "machinery", "others"]);
+const unitSchema = z.enum(["kolar", "sidlagatta", "ramnagar"]);
 
 function queryDate(value: unknown, endOfDay = false) {
   if (typeof value !== "string") return undefined;
@@ -20,6 +21,7 @@ const dateSchema = z
 
 const createSchema = z.object({
   category: maintenanceCategorySchema,
+  unit: unitSchema,
   amount: z.number().positive(),
   expense_date: dateSchema,
   description: z.string().min(1).max(500),
@@ -27,6 +29,7 @@ const createSchema = z.object({
 
 const updateSchema = z.object({
   category: maintenanceCategorySchema.optional(),
+  unit: unitSchema.optional(),
   amount: z.number().positive().optional(),
   expense_date: dateSchema.optional(),
   description: z.string().min(1).max(500).optional(),
@@ -36,6 +39,7 @@ export async function createMaintenanceExpenseHandler(req: Request, res: Respons
   const body = createSchema.parse(req.body);
   const expense = await maintenanceService.createMaintenanceExpense(req.user!.id, {
     category: body.category,
+    unit: body.unit,
     amount: body.amount,
     expenseDate: new Date(body.expense_date),
     description: body.description,
@@ -47,6 +51,7 @@ export async function updateMaintenanceExpenseHandler(req: Request, res: Respons
   const body = updateSchema.parse(req.body);
   const expense = await maintenanceService.updateMaintenanceExpense(req.params.id, {
     category: body.category,
+    unit: body.unit,
     amount: body.amount,
     expenseDate: body.expense_date ? new Date(body.expense_date) : undefined,
     description: body.description,
@@ -60,11 +65,12 @@ export async function deleteMaintenanceExpenseHandler(req: Request, res: Respons
 }
 
 export async function listMaintenanceExpensesHandler(req: Request, res: Response) {
-  const { category, from, to } = req.query;
+  const { category, unit, from, to } = req.query;
   const expenses = await maintenanceService.listMaintenanceExpenses({
     category: maintenanceCategorySchema.safeParse(category).success
       ? (category as "food" | "machinery" | "others")
       : undefined,
+    unit: unitSchema.safeParse(unit).success ? (unit as "kolar" | "sidlagatta" | "ramnagar") : undefined,
     from: queryDate(from),
     to: queryDate(to, true),
   });
@@ -72,8 +78,9 @@ export async function listMaintenanceExpensesHandler(req: Request, res: Response
 }
 
 export async function maintenanceSummaryHandler(req: Request, res: Response) {
-  const { from, to } = req.query;
+  const { unit, from, to } = req.query;
   const summary = await maintenanceService.maintenanceSummary({
+    unit: unitSchema.safeParse(unit).success ? (unit as "kolar" | "sidlagatta" | "ramnagar") : undefined,
     from: queryDate(from),
     to: queryDate(to, true),
   });

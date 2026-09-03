@@ -1,11 +1,12 @@
 import { prisma } from "../../../lib/prisma";
 import { ConflictError, NotFoundError } from "../../../lib/errors";
-import type { EmployeeCategory, SalaryPaymentType } from "@prisma/client";
+import type { EmployeeCategory, SalaryPaymentType, Unit } from "@prisma/client";
 
 interface CreateEmployeeInput {
   name: string;
   phone?: string;
   category: EmployeeCategory;
+  unit: Unit;
   monthlySalary: number;
 }
 
@@ -13,6 +14,7 @@ interface UpdateEmployeeInput {
   name?: string;
   phone?: string | null;
   category?: EmployeeCategory;
+  unit?: Unit;
   monthlySalary?: number;
   status?: "active" | "inactive";
 }
@@ -23,14 +25,18 @@ export async function createEmployee(input: CreateEmployeeInput) {
       name: input.name,
       phone: input.phone,
       category: input.category,
+      unit: input.unit,
       monthlySalary: input.monthlySalary,
     },
   });
 }
 
-export async function listEmployees(category?: EmployeeCategory) {
+export async function listEmployees(category?: EmployeeCategory, unit?: Unit) {
   return prisma.employee.findMany({
-    where: category ? { category } : undefined,
+    where: {
+      ...(category ? { category } : {}),
+      ...(unit ? { unit } : {}),
+    },
     orderBy: [{ category: "asc" }, { name: "asc" }],
   });
 }
@@ -60,6 +66,7 @@ export async function deleteEmployee(id: string) {
 export interface RecordSalaryPaymentInput {
   employeeId: string;
   type: SalaryPaymentType;
+  unit: Unit;
   amount: number;
   month: number;
   year: number;
@@ -73,6 +80,7 @@ export async function recordSalaryPayment(createdById: string, input: RecordSala
     data: {
       employeeId: input.employeeId,
       type: input.type,
+      unit: input.unit,
       amount: input.amount,
       month: input.month,
       year: input.year,
@@ -80,7 +88,9 @@ export async function recordSalaryPayment(createdById: string, input: RecordSala
       note: input.note,
       createdById,
     },
-    include: { employee: { select: { name: true, category: true } } },
+    include: {
+      employee: { select: { name: true, category: true, unit: true } },
+    },
   });
 }
 
@@ -89,6 +99,7 @@ export interface ListSalaryPaymentsFilter {
   month?: number;
   year?: number;
   type?: SalaryPaymentType;
+  unit?: Unit;
   from?: Date;
   to?: Date;
 }
@@ -100,11 +111,14 @@ export async function listSalaryPayments(filter: ListSalaryPaymentsFilter) {
       month: filter.month,
       year: filter.year,
       type: filter.type,
+      unit: filter.unit,
       paymentDate: filter.from || filter.to
         ? { gte: filter.from, lte: filter.to }
         : undefined,
     },
-    include: { employee: { select: { name: true, category: true } } },
+    include: {
+      employee: { select: { name: true, category: true, unit: true } },
+    },
     orderBy: { paymentDate: "desc" },
   });
 }
@@ -120,6 +134,7 @@ export interface SalarySummaryRow {
   name: string;
   phone: string | null;
   category: EmployeeCategory;
+  unit: Unit;
   status: "active" | "inactive";
   monthlySalary: number;
   advanceTotal: number;
@@ -128,12 +143,15 @@ export interface SalarySummaryRow {
   remaining: number;
 }
 
-export async function salaryMonthSummary(month: number, year: number) {
+export async function salaryMonthSummary(month: number, year: number, unit?: Unit) {
   const [employees, aggregates] = await Promise.all([
-    prisma.employee.findMany({ orderBy: [{ category: "asc" }, { name: "asc" }] }),
+    prisma.employee.findMany({
+      where: unit ? { unit } : undefined,
+      orderBy: [{ category: "asc" }, { name: "asc" }],
+    }),
     prisma.salaryPayment.groupBy({
       by: ["employeeId", "type"],
-      where: { month, year },
+      where: { month, year, ...(unit ? { unit } : {}) },
       _sum: { amount: true },
     }),
   ]);
@@ -155,6 +173,7 @@ export async function salaryMonthSummary(month: number, year: number) {
       name: employee.name,
       phone: employee.phone,
       category: employee.category,
+      unit: employee.unit,
       status: employee.status,
       monthlySalary,
       advanceTotal: t.advance,

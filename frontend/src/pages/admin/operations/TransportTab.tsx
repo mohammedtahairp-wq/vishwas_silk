@@ -7,12 +7,13 @@ import {
   type TransportExpense,
   type TransportExpenseCategory,
   type TransportSummary,
+  type Unit,
   type Vehicle,
 } from "../../../api/types";
 import { Modal } from "../../../components/Modal";
 import { inrCurrency } from "../dashboard/format";
 
-export function TransportTab() {
+export function TransportTab({ unit }: { unit?: Unit }) {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [expenses, setExpenses] = useState<TransportExpense[]>([]);
   const [summary, setSummary] = useState<TransportSummary | null>(null);
@@ -28,17 +29,20 @@ export function TransportTab() {
   async function load() {
     try {
       const params: Record<string, string> = {};
+      if (unit) params.unit = unit;
       if (filterVehicle) params.vehicle_id = filterVehicle;
       if (filterCategory) params.category = filterCategory;
       if (filterFrom) params.from = filterFrom;
       if (filterTo) params.to = filterTo;
       const [v, e, s] = await Promise.all([
-        adminApi.listVehicles(),
+        adminApi.listVehicles(unit ? { unit } : undefined),
         adminApi.listTransportExpenses(
           Object.keys(params).length ? (params as Parameters<typeof adminApi.listTransportExpenses>[0]) : undefined
         ),
         adminApi.transportSummary(
-          filterFrom || filterTo ? { from: filterFrom || undefined, to: filterTo || undefined } : undefined
+          unit || filterFrom || filterTo
+            ? { unit: unit ?? undefined, from: filterFrom || undefined, to: filterTo || undefined }
+            : undefined
         ),
       ]);
       setVehicles(v);
@@ -53,7 +57,7 @@ export function TransportTab() {
   useEffect(() => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filterVehicle, filterCategory, filterFrom, filterTo]);
+  }, [filterVehicle, filterCategory, filterFrom, filterTo, unit]);
 
   async function handleDeleteExpense(expense: TransportExpense) {
     if (!window.confirm(`Delete this ${expense.category} expense of ${inrCurrency(Number(expense.amount))}?`)) return;
@@ -75,7 +79,7 @@ export function TransportTab() {
         >
           + Add Vehicle
         </button>
-        <AddExpenseButton vehicles={vehicles} onSaved={load} />
+        <AddExpenseButton vehicles={vehicles} unit={unit as Unit} onSaved={load} />
         {error && <p className="text-sm text-red-600">{error}</p>}
       </div>
 
@@ -251,6 +255,7 @@ export function TransportTab() {
 
       {showAddVehicle && (
         <VehicleFormModal
+          unit={unit as Unit}
           onClose={() => setShowAddVehicle(false)}
           onSaved={async () => {
             setShowAddVehicle(false);
@@ -262,6 +267,7 @@ export function TransportTab() {
       {editingVehicle && (
         <VehicleFormModal
           vehicle={editingVehicle}
+          unit={unit as Unit}
           onClose={() => setEditingVehicle(null)}
           onSaved={async () => {
             setEditingVehicle(null);
@@ -282,7 +288,7 @@ function StatCard({ label, value, highlight }: { label: string; value: string; h
   );
 }
 
-function AddExpenseButton({ vehicles, onSaved }: { vehicles: Vehicle[]; onSaved: () => void }) {
+function AddExpenseButton({ vehicles, unit, onSaved }: { vehicles: Vehicle[]; unit: Unit; onSaved: () => void }) {
   const [open, setOpen] = useState(false);
   const activeVehicles = vehicles.filter((v) => v.status === "active");
   return (
@@ -298,6 +304,7 @@ function AddExpenseButton({ vehicles, onSaved }: { vehicles: Vehicle[]; onSaved:
       {open && (
         <TransportExpenseFormModal
           vehicles={activeVehicles}
+          unit={unit}
           onClose={() => setOpen(false)}
           onSaved={async () => {
             setOpen(false);
@@ -311,15 +318,18 @@ function AddExpenseButton({ vehicles, onSaved }: { vehicles: Vehicle[]; onSaved:
 
 function VehicleFormModal({
   vehicle,
+  unit,
   onClose,
   onSaved,
 }: {
   vehicle?: Vehicle;
+  unit: Unit;
   onClose: () => void;
   onSaved: () => void;
 }) {
   const [name, setName] = useState(vehicle?.name ?? "");
   const [number, setNumber] = useState(vehicle?.number ?? "");
+  const [unitValue, setUnitValue] = useState<Unit>(vehicle?.unit ?? unit);
   const [status, setStatus] = useState<"active" | "inactive">(vehicle?.status ?? "active");
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -330,9 +340,9 @@ function VehicleFormModal({
     setError(null);
     try {
       if (vehicle) {
-        await adminApi.updateVehicle(vehicle.id, { name, number, status });
+        await adminApi.updateVehicle(vehicle.id, { name, number, unit: unitValue, status });
       } else {
-        await adminApi.createVehicle({ name, number });
+        await adminApi.createVehicle({ name, number, unit: unitValue });
       }
       onSaved();
     } catch (err) {
@@ -351,6 +361,14 @@ function VehicleFormModal({
         <div>
           <label className="block text-xs font-medium text-gray-600 mb-1">Number</label>
           <input className="w-full border border-gray-300 rounded px-2 py-1.5" value={number} onChange={(e) => setNumber(e.target.value)} required placeholder="e.g. KA-05-AB-1234" />
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-gray-600 mb-1">Unit</label>
+          <select className="w-full border border-gray-300 rounded px-2 py-1.5" value={unitValue} onChange={(e) => setUnitValue(e.target.value as Unit)}>
+            <option value="kolar">Kolar</option>
+            <option value="sidlagatta">Sidlagatta</option>
+            <option value="ramnagar">Ramnagar</option>
+          </select>
         </div>
         {vehicle && (
           <div>
@@ -377,10 +395,12 @@ function VehicleFormModal({
 
 function TransportExpenseFormModal({
   vehicles,
+  unit,
   onClose,
   onSaved,
 }: {
   vehicles: Vehicle[];
+  unit: Unit;
   onClose: () => void;
   onSaved: () => void;
 }) {
@@ -400,6 +420,7 @@ function TransportExpenseFormModal({
       await adminApi.createTransportExpense({
         vehicle_id: vehicleId,
         category,
+        unit,
         amount: Number(amount),
         expense_date: expenseDate,
         description: description || undefined,

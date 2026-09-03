@@ -8,6 +8,7 @@ import {
   type EmployeeCategory,
   type SalaryMonthSummary,
   type SalaryPayment,
+  type Unit,
 } from "../../../api/types";
 import { Modal } from "../../../components/Modal";
 import { inrCurrency } from "../dashboard/format";
@@ -27,7 +28,7 @@ function monthYearOptions() {
   return options.reverse();
 }
 
-export function SalaryTab() {
+export function SalaryTab({ unit }: { unit?: Unit }) {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [summary, setSummary] = useState<SalaryMonthSummary | null>(null);
   const [payments, setPayments] = useState<SalaryPayment[]>([]);
@@ -47,9 +48,9 @@ export function SalaryTab() {
   async function load() {
     try {
       const [emps, sum, pays] = await Promise.all([
-        adminApi.listEmployees(),
-        adminApi.salarySummary({ month: monthYear.month, year: monthYear.year }),
-        adminApi.listSalaryPayments({ month: monthYear.month, year: monthYear.year }),
+        adminApi.listEmployees(unit ? { unit } : undefined),
+        adminApi.salarySummary({ month: monthYear.month, year: monthYear.year, ...(unit ? { unit } : {}) }),
+        adminApi.listSalaryPayments({ month: monthYear.month, year: monthYear.year, ...(unit ? { unit } : {}) }),
       ]);
       setEmployees(emps);
       setSummary(sum);
@@ -63,7 +64,7 @@ export function SalaryTab() {
   useEffect(() => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [monthYear]);
+  }, [monthYear, unit]);
 
   async function handleDeleteEmployee(employee: Employee) {
     if (!window.confirm(`Delete employee "${employee.name}"?`)) return;
@@ -280,6 +281,7 @@ export function SalaryTab() {
       {showAddEmployee && (
         <EmployeeFormModal
           title="Add employee"
+          unit={unit as Unit}
           onClose={() => setShowAddEmployee(false)}
           onSaved={async () => {
             setShowAddEmployee(false);
@@ -292,6 +294,7 @@ export function SalaryTab() {
         <EmployeeFormModal
           title="Edit employee"
           employee={editingEmployee}
+          unit={unit as Unit}
           onClose={() => setEditingEmployee(null)}
           onSaved={async () => {
             setEditingEmployee(null);
@@ -305,6 +308,7 @@ export function SalaryTab() {
           employeeId={payDialog.row.employeeId}
           employeeName={payDialog.row.name}
           type={payDialog.type}
+          unit={unit as Unit}
           month={summary.month}
           year={summary.year}
           suggestedAmount={
@@ -335,17 +339,20 @@ function StatCard({ label, value, highlight }: { label: string; value: string; h
 function EmployeeFormModal({
   title,
   employee,
+  unit,
   onClose,
   onSaved,
 }: {
   title: string;
   employee?: Employee;
+  unit: Unit;
   onClose: () => void;
   onSaved: () => void;
 }) {
   const [name, setName] = useState(employee?.name ?? "");
   const [phone, setPhone] = useState(employee?.phone ?? "");
   const [category, setCategory] = useState<EmployeeCategory>(employee?.category ?? "sheet_machine");
+  const [unitValue, setUnitValue] = useState<Unit>(employee?.unit ?? unit);
   const [monthlySalary, setMonthlySalary] = useState(
     employee ? String(Number(employee.monthlySalary)) : ""
   );
@@ -363,6 +370,7 @@ function EmployeeFormModal({
           name,
           phone: phone || null,
           category,
+          unit: unitValue,
           monthlySalary: Number(monthlySalary),
           status,
         });
@@ -371,6 +379,7 @@ function EmployeeFormModal({
           name,
           phone: phone || undefined,
           category,
+          unit: unitValue,
           monthlySalary: Number(monthlySalary),
         });
       }
@@ -407,6 +416,18 @@ function EmployeeFormModal({
           </select>
         </div>
         <div>
+          <label className="block text-xs font-medium text-gray-600 mb-1">Unit</label>
+          <select
+            className="w-full border border-gray-300 rounded px-2 py-1.5"
+            value={unitValue}
+            onChange={(e) => setUnitValue(e.target.value as Unit)}
+          >
+            <option value="kolar">Kolar</option>
+            <option value="sidlagatta">Sidlagatta</option>
+            <option value="ramnagar">Ramnagar</option>
+          </select>
+        </div>
+        <div>
           <label className="block text-xs font-medium text-gray-600 mb-1">Monthly Salary (₹)</label>
           <input type="number" min="0" step="0.01" className="w-full border border-gray-300 rounded px-2 py-1.5" value={monthlySalary} onChange={(e) => setMonthlySalary(e.target.value)} required />
         </div>
@@ -437,6 +458,7 @@ function PaySalaryModal({
   employeeId,
   employeeName,
   type,
+  unit,
   month,
   year,
   suggestedAmount,
@@ -446,6 +468,7 @@ function PaySalaryModal({
   employeeId: string;
   employeeName: string;
   type: "advance" | "salary";
+  unit: Unit;
   month: number;
   year: number;
   suggestedAmount: number;
@@ -466,6 +489,7 @@ function PaySalaryModal({
       await adminApi.recordSalaryPayment({
         employee_id: employeeId,
         type,
+        unit,
         amount: Number(amount),
         month,
         year,

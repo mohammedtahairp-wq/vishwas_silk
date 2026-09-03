@@ -14,7 +14,7 @@ When asked to "deploy", follow this guide end-to-end. Do NOT ask the user for cr
 - **S3:** bucket `vishwas-silk-frontend` (ap-south-1), configured to redirect all requests to `https://manage.vishwassilk.com/`.
 - **AWS CLI creds:** configured in the LOCAL AWS CLI default profile as user `vscoder1` (keys originated from `C:\Users\moham\Desktop\Coding\VISHWAS SILK\vscoder1_accessKeys.csv`). If the local AWS CLI loses its credentials, re-configure from that CSV (`aws configure`). The server has NO AWS creds — S3 sync must run from the local machine.
 - **Git:** local repo at `C:\Users\moham\Desktop\Coding\VISHWAS SILK` (branch `main`, remote is GitHub). The user makes code changes; during deploy, the agent commits and pushes them itself, then pulls on the server.
-- **Android APK:** Capacitor app at `frontend/android`. Output: `frontend/android/app/build/outputs/apk/debug/app-debug.apk`.
+- **Android APK:** Capacitor app at `frontend/android`. Output: `frontend/android/app/build/outputs/apk/debug/vishwassilk-debug.apk`. After every build it MUST be published to `https://vishwassilk.com/vishwassilk.apk` (see step 7) so users always download the latest build.
 
 ## Deployment steps (run in order)
 
@@ -32,10 +32,16 @@ When asked to "deploy", follow this guide end-to-end. Do NOT ask the user for cr
    - From LOCAL machine: `aws s3 sync frontend/dist s3://vishwas-silk-frontend --delete`
    - Verify S3 redirect intact: `curl -sI http://vishwas-silk-frontend.s3-website.ap-south-1.amazonaws.com/` -> Location `https://manage.vishwassilk.com/`
 7. **Android APK (after every frontend change):**
-   - Locally: `npm run build` (frontend) then `npx cap sync android`
-   - Build APK: `cd frontend/android` then `gradlew.bat assembleDebug --no-daemon`
+   - Locally: `npm run build` (frontend) then `npx cap sync android` (run from `frontend/`)
+   - Build APK: from `frontend/android` run `gradlew.bat assembleDebug --no-daemon`
    - Requires `JAVA_HOME="C:\Program Files\Android\Android Studio\jbr"` (system Java is too old).
    - Verify the URL inside the new bundle is `https://manage.vishwassilk.com/api`, not the IP.
+   - Publish to the download site (ALWAYS — every new build must replace the live APK):
+     - `scp -i <KEY> frontend/android/app/build/outputs/apk/debug/vishwassilk-debug.apk ec2-user@3.110.170.133:/home/ec2-user/vishwas-silk-website/vishwassilk.apk`
+     - This makes it downloadable at `https://vishwassilk.com/vishwassilk.apk` (marketing site nginx root is `/home/ec2-user/vishwas-silk-website/` on the same EC2).
+     - Verify: `curl -sI https://vishwassilk.com/vishwassilk.apk` -> HTTP 200 and Content-Length equals the local APK size; compare MD5 of a downloaded copy if unsure.
+   - Keep `/home/ec2-user/vishwas-silk-website/version.json` in sync with the APK (`versionName`, `versionCode`, `downloadUrl`, `releaseNotes`; same file is tracked in the repo root). The Android app reads it via `VITE_APK_VERSION_URL=https://vishwassilk.com/version.json` for in-app update checks.
+   - Note: Gradle may report UP-TO-DATE and not rewrite the APK when the web bundle is byte-identical — that's fine; the existing APK already contains the current bundle (verify by inspecting `assets/public/index.html` inside the zip).
 8. **Smoke test:**
    - Desktop browser login at `https://manage.vishwassilk.com` (admin username `vishwasadminsilk`)
    - Mobile browser login

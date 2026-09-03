@@ -1,15 +1,17 @@
 import { prisma } from "../../../lib/prisma";
 import { ConflictError, NotFoundError } from "../../../lib/errors";
-import type { TransportExpenseCategory } from "@prisma/client";
+import type { TransportExpenseCategory, Unit } from "@prisma/client";
 
 interface CreateVehicleInput {
   name: string;
   number: string;
+  unit: Unit;
 }
 
 interface UpdateVehicleInput {
   name?: string;
   number?: string;
+  unit?: Unit;
   status?: "active" | "inactive";
 }
 
@@ -19,8 +21,11 @@ export async function createVehicle(input: CreateVehicleInput) {
   return prisma.vehicle.create({ data: input });
 }
 
-export async function listVehicles() {
-  return prisma.vehicle.findMany({ orderBy: [{ status: "asc" }, { name: "asc" }] });
+export async function listVehicles(unit?: Unit) {
+  return prisma.vehicle.findMany({
+    where: unit ? { unit } : undefined,
+    orderBy: [{ status: "asc" }, { name: "asc" }],
+  });
 }
 
 export async function getVehicleById(id: string) {
@@ -54,6 +59,7 @@ export async function deleteVehicle(id: string) {
 export interface TransportExpenseFilter {
   vehicleId?: string;
   category?: TransportExpenseCategory;
+  unit?: Unit;
   from?: Date;
   to?: Date;
 }
@@ -63,6 +69,7 @@ export async function createTransportExpense(
   input: {
     vehicleId: string;
     category: TransportExpenseCategory;
+    unit: Unit;
     amount: number;
     expenseDate: Date;
     description?: string;
@@ -73,6 +80,7 @@ export async function createTransportExpense(
     data: {
       vehicleId: input.vehicleId,
       category: input.category,
+      unit: input.unit,
       amount: input.amount,
       expenseDate: input.expenseDate,
       description: input.description,
@@ -87,6 +95,7 @@ export async function updateTransportExpense(
   input: {
     vehicleId?: string;
     category?: TransportExpenseCategory;
+    unit?: Unit;
     amount?: number;
     expenseDate?: Date;
     description?: string | null;
@@ -113,6 +122,7 @@ export async function listTransportExpenses(filter: TransportExpenseFilter) {
     where: {
       vehicleId: filter.vehicleId,
       category: filter.category,
+      unit: filter.unit,
       expenseDate: filter.from || filter.to
         ? { gte: filter.from, lte: filter.to }
         : undefined,
@@ -140,6 +150,7 @@ export async function transportSummary(filter: TransportExpenseFilter): Promise<
   const where = {
     vehicleId: filter.vehicleId,
     category: filter.category,
+    unit: filter.unit,
     expenseDate: filter.from || filter.to
       ? { gte: filter.from, lte: filter.to }
       : undefined,

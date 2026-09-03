@@ -21,6 +21,7 @@ import { GrandTotalPage } from "./pages/admin/GrandTotalPage";
 import { CustomerAccountsPage } from "./pages/admin/CustomerAccountsPage";
 import { CustomerProductHistoryPage } from "./pages/admin/CustomerProductHistoryPage";
 import { OperationsPage } from "./pages/admin/operations/OperationsPage";
+import { UnitOperationsPage } from "./pages/admin/operations/UnitOperationsPage";
 
 import { RiderLayout } from "./pages/rider/RiderLayout";
 import { MyCustomersPage } from "./pages/rider/MyCustomersPage";
@@ -65,6 +66,7 @@ export default function App() {
               <Route path="grand-total" element={<GrandTotalPage />} />
               <Route path="settlements" element={<SettlementsPage />} />
               <Route path="operations" element={<OperationsPage />} />
+              <Route path="operations/:unit" element={<UnitOperationsPage />} />
             </Route>
           </Route>
 

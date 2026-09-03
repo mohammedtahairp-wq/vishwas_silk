@@ -160,6 +160,16 @@ export interface PaidSettlementEntry {
 
 // ---- Phase 2: Operations ----
 
+export type Unit = "kolar" | "sidlagatta" | "ramnagar";
+
+export const UNIT_LABELS: Record<Unit, string> = {
+  kolar: "Kolar",
+  sidlagatta: "Sidlagatta",
+  ramnagar: "Ramnagar",
+};
+
+export const UNITS: Unit[] = ["kolar", "sidlagatta", "ramnagar"];
+
 export type EmployeeCategory = "sheet_machine" | "ovendry" | "khalla_jala" | "drivers_helpers";
 
 export const EMPLOYEE_CATEGORY_LABELS: Record<EmployeeCategory, string> = {
@@ -174,6 +184,7 @@ export interface Employee {
   name: string;
   phone?: string | null;
   category: EmployeeCategory;
+  unit: Unit;
   monthlySalary: string;
   status: "active" | "inactive";
   createdAt: string;
@@ -185,12 +196,13 @@ export interface SalaryPayment {
   id: string;
   employeeId: string;
   type: SalaryPaymentType;
+  unit: Unit;
   amount: string;
   month: number;
   year: number;
   paymentDate: string;
   note?: string | null;
-  employee?: { name: string; category: EmployeeCategory };
+  employee?: { name: string; category: EmployeeCategory; unit: Unit };
 }
 
 export interface SalarySummaryRow {
@@ -198,6 +210,7 @@ export interface SalarySummaryRow {
   name: string;
   phone: string | null;
   category: EmployeeCategory;
+  unit: Unit;
   status: "active" | "inactive";
   monthlySalary: number;
   advanceTotal: number;
@@ -222,6 +235,7 @@ export interface Vehicle {
   id: string;
   name: string;
   number: string;
+  unit: Unit;
   status: "active" | "inactive";
   createdAt: string;
 }
@@ -237,6 +251,7 @@ export interface TransportExpense {
   id: string;
   vehicleId: string;
   category: TransportExpenseCategory;
+  unit: Unit;
   amount: string;
   expenseDate: string;
   description?: string | null;
@@ -268,6 +283,7 @@ export const MAINTENANCE_CATEGORY_LABELS: Record<MaintenanceExpenseCategory, str
 export interface MaintenanceExpense {
   id: string;
   category: MaintenanceExpenseCategory;
+  unit: Unit;
   amount: string;
   expenseDate: string;
   description: string;

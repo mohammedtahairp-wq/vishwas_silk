@@ -3,6 +3,7 @@ import { z } from "zod";
 import * as transportService from "./transport.service";
 
 const transportCategorySchema = z.enum(["diesel", "repair"]);
+const unitSchema = z.enum(["kolar", "sidlagatta", "ramnagar"]);
 
 function queryDate(value: unknown, endOfDay = false) {
   if (typeof value !== "string") return undefined;
@@ -17,11 +18,13 @@ function queryDate(value: unknown, endOfDay = false) {
 const createVehicleSchema = z.object({
   name: z.string().min(1),
   number: z.string().min(1),
+  unit: unitSchema,
 });
 
 const updateVehicleSchema = z.object({
   name: z.string().min(1).optional(),
   number: z.string().min(1).optional(),
+  unit: unitSchema.optional(),
   status: z.enum(["active", "inactive"]).optional(),
 });
 
@@ -31,8 +34,12 @@ export async function createVehicleHandler(req: Request, res: Response) {
   res.status(201).json(vehicle);
 }
 
-export async function listVehiclesHandler(_req: Request, res: Response) {
-  const vehicles = await transportService.listVehicles();
+export async function listVehiclesHandler(req: Request, res: Response) {
+  const { unit } = req.query;
+  const parsedUnit = unitSchema.safeParse(unit);
+  const vehicles = await transportService.listVehicles(
+    parsedUnit.success ? parsedUnit.data : undefined
+  );
   res.json(vehicles);
 }
 
@@ -54,6 +61,7 @@ const dateSchema = z
 const createTransportExpenseSchema = z.object({
   vehicle_id: z.string().uuid(),
   category: transportCategorySchema,
+  unit: unitSchema,
   amount: z.number().positive(),
   expense_date: dateSchema,
   description: z.string().max(500).optional(),
@@ -62,6 +70,7 @@ const createTransportExpenseSchema = z.object({
 const updateTransportExpenseSchema = z.object({
   vehicle_id: z.string().uuid().optional(),
   category: transportCategorySchema.optional(),
+  unit: unitSchema.optional(),
   amount: z.number().positive().optional(),
   expense_date: dateSchema.optional(),
   description: z.string().max(500).nullable().optional(),
@@ -72,6 +81,7 @@ export async function createTransportExpenseHandler(req: Request, res: Response)
   const expense = await transportService.createTransportExpense(req.user!.id, {
     vehicleId: body.vehicle_id,
     category: body.category,
+    unit: body.unit,
     amount: body.amount,
     expenseDate: new Date(body.expense_date),
     description: body.description,
@@ -84,6 +94,7 @@ export async function updateTransportExpenseHandler(req: Request, res: Response)
   const expense = await transportService.updateTransportExpense(req.params.id, {
     vehicleId: body.vehicle_id,
     category: body.category,
+    unit: body.unit,
     amount: body.amount,
     expenseDate: body.expense_date ? new Date(body.expense_date) : undefined,
     description: body.description,
@@ -97,12 +108,13 @@ export async function deleteTransportExpenseHandler(req: Request, res: Response)
 }
 
 export async function listTransportExpensesHandler(req: Request, res: Response) {
-  const { vehicle_id, category, from, to } = req.query;
+  const { vehicle_id, category, unit, from, to } = req.query;
   const expenses = await transportService.listTransportExpenses({
     vehicleId: typeof vehicle_id === "string" ? vehicle_id : undefined,
     category: transportCategorySchema.safeParse(category).success
       ? (category as "diesel" | "repair")
       : undefined,
+    unit: unitSchema.safeParse(unit).success ? (unit as "kolar" | "sidlagatta" | "ramnagar") : undefined,
     from: queryDate(from),
     to: queryDate(to, true),
   });
@@ -110,9 +122,10 @@ export async function listTransportExpensesHandler(req: Request, res: Response) 
 }
 
 export async function transportSummaryHandler(req: Request, res: Response) {
-  const { vehicle_id, from, to } = req.query;
+  const { vehicle_id, unit, from, to } = req.query;
   const summary = await transportService.transportSummary({
     vehicleId: typeof vehicle_id === "string" ? vehicle_id : undefined,
+    unit: unitSchema.safeParse(unit).success ? (unit as "kolar" | "sidlagatta" | "ramnagar") : undefined,
     from: queryDate(from),
     to: queryDate(to, true),
   });

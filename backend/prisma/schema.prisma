@@ -52,6 +52,12 @@ enum MaintenanceExpenseCategory {
   others
 }
 
+enum Unit {
+  kolar
+  sidlagatta
+  ramnagar
+}
+
 model User {
   id           String   @id @default(uuid())
   loginPhone   String?  @unique @map("login_phone")
@@ -217,6 +223,7 @@ model Employee {
   name          String
   phone         String?
   category      EmployeeCategory
+  unit          Unit             @default(kolar)
   monthlySalary Decimal          @map("monthly_salary") @db.Decimal(12, 2)
   status        Status           @default(active)
   createdAt     DateTime         @default(now()) @map("created_at")
@@ -224,6 +231,7 @@ model Employee {
   salaryPayments SalaryPayment[]
 
   @@index([category])
+  @@index([unit])
   @@map("employees")
 }
 
@@ -231,6 +239,7 @@ model SalaryPayment {
   id          String            @id @default(uuid())
   employeeId  String            @map("employee_id")
   type        SalaryPaymentType
+  unit        Unit              @default(kolar)
   amount      Decimal           @db.Decimal(12, 2)
   month       Int
   year        Int
@@ -243,6 +252,7 @@ model SalaryPayment {
   createdBy User     @relation("SalaryPaymentCreatedBy", fields: [createdById], references: [id])
 
   @@index([employeeId, year, month])
+  @@index([unit, year, month])
   @@map("salary_payments")
 }
 
@@ -250,11 +260,13 @@ model Vehicle {
   id        String   @id @default(uuid())
   name      String
   number    String   @unique
+  unit      Unit     @default(kolar)
   status    Status   @default(active)
   createdAt DateTime @default(now()) @map("created_at")
 
   transportExpenses TransportExpense[]
 
+  @@index([unit])
   @@map("vehicles")
 }
 
@@ -262,6 +274,7 @@ model TransportExpense {
   id          String                   @id @default(uuid())
   vehicleId   String                   @map("vehicle_id")
   category    TransportExpenseCategory
+  unit        Unit                     @default(kolar)
   amount      Decimal                  @db.Decimal(12, 2)
   expenseDate DateTime                 @default(now()) @map("expense_date") @db.Date
   description String?
@@ -273,12 +286,14 @@ model TransportExpense {
 
   @@index([vehicleId, expenseDate])
   @@index([expenseDate])
+  @@index([unit, expenseDate])
   @@map("transport_expenses")
 }
 
 model MaintenanceExpense {
   id          String                      @id @default(uuid())
   category    MaintenanceExpenseCategory
+  unit        Unit                        @default(kolar)
   amount      Decimal                     @db.Decimal(12, 2)
   expenseDate DateTime                    @default(now()) @map("expense_date") @db.Date
   description String
@@ -288,5 +303,6 @@ model MaintenanceExpense {
   createdBy User @relation("MaintenanceExpenseCreatedBy", fields: [createdById], references: [id])
 
   @@index([expenseDate])
+  @@index([unit, expenseDate])
   @@map("maintenance_expenses")
 }

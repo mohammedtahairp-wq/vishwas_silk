@@ -12,7 +12,15 @@ const navItems = [
   { to: "/admin/pickups", label: "Pickups" },
   { to: "/admin/grand-total", label: "Grand Total" },
   { to: "/admin/settlements", label: "Settlements" },
-  { to: "/admin/operations", label: "Operations" },
+  {
+    to: "/admin/operations",
+    label: "Operations",
+    children: [
+      { to: "/admin/operations/kolar", label: "Kolar" },
+      { to: "/admin/operations/sidlagatta", label: "Sidlagatta" },
+      { to: "/admin/operations/ramnagar", label: "Ramnagar" },
+    ],
+  },
 ];
 
 export function AdminLayout() {

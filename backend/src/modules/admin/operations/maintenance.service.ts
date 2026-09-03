@@ -1,9 +1,10 @@
 import { prisma } from "../../../lib/prisma";
 import { NotFoundError } from "../../../lib/errors";
-import type { MaintenanceExpenseCategory } from "@prisma/client";
+import type { MaintenanceExpenseCategory, Unit } from "@prisma/client";
 
 export interface MaintenanceExpenseFilter {
   category?: MaintenanceExpenseCategory;
+  unit?: Unit;
   from?: Date;
   to?: Date;
 }
@@ -12,6 +13,7 @@ export async function createMaintenanceExpense(
   createdById: string,
   input: {
     category: MaintenanceExpenseCategory;
+    unit: Unit;
     amount: number;
     expenseDate: Date;
     description: string;
@@ -26,6 +28,7 @@ export async function updateMaintenanceExpense(
   id: string,
   input: {
     category?: MaintenanceExpenseCategory;
+    unit?: Unit;
     amount?: number;
     expenseDate?: Date;
     description?: string;
@@ -46,6 +49,7 @@ export async function listMaintenanceExpenses(filter: MaintenanceExpenseFilter) 
   return prisma.maintenanceExpense.findMany({
     where: {
       category: filter.category,
+      unit: filter.unit,
       expenseDate: filter.from || filter.to
         ? { gte: filter.from, lte: filter.to }
         : undefined,
@@ -68,6 +72,7 @@ export async function maintenanceSummary(
     by: ["category"],
     where: {
       category: filter.category,
+      unit: filter.unit,
       expenseDate: filter.from || filter.to
         ? { gte: filter.from, lte: filter.to }
         : undefined,

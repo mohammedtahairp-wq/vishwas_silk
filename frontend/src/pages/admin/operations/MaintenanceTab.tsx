@@ -7,11 +7,12 @@ import {
   type MaintenanceExpense,
   type MaintenanceExpenseCategory,
   type MaintenanceSummary,
+  type Unit,
 } from "../../../api/types";
 import { Modal } from "../../../components/Modal";
 import { inrCurrency } from "../dashboard/format";
 
-export function MaintenanceTab() {
+export function MaintenanceTab({ unit }: { unit?: Unit }) {
   const [expenses, setExpenses] = useState<MaintenanceExpense[]>([]);
   const [summary, setSummary] = useState<MaintenanceSummary | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -23,6 +24,7 @@ export function MaintenanceTab() {
   async function load() {
     try {
       const params: Record<string, string> = {};
+      if (unit) params.unit = unit;
       if (filterCategory) params.category = filterCategory;
       if (filterFrom) params.from = filterFrom;
       if (filterTo) params.to = filterTo;
@@ -31,7 +33,9 @@ export function MaintenanceTab() {
           Object.keys(params).length ? (params as Parameters<typeof adminApi.listMaintenanceExpenses>[0]) : undefined
         ),
         adminApi.maintenanceSummary(
-          filterFrom || filterTo ? { from: filterFrom || undefined, to: filterTo || undefined } : undefined
+          unit || filterFrom || filterTo
+            ? { unit: unit ?? undefined, from: filterFrom || undefined, to: filterTo || undefined }
+            : undefined
         ),
       ]);
       setExpenses(e);
@@ -44,7 +48,8 @@ export function MaintenanceTab() {
 
   useEffect(() => {
     load();
-  }, [filterCategory, filterFrom, filterTo]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filterCategory, filterFrom, filterTo, unit]);
 
   async function handleDelete(expense: MaintenanceExpense) {
     if (!window.confirm(`Delete this ${expense.category} expense of ${inrCurrency(Number(expense.amount))}?`)) return;
@@ -60,7 +65,7 @@ export function MaintenanceTab() {
   return (
     <div className="space-y-8">
       <div className="flex items-center gap-3 flex-wrap">
-        <AddExpenseButton onSaved={load} />
+        <AddExpenseButton unit={unit as Unit} onSaved={load} />
         {error && <p className="text-sm text-red-600">{error}</p>}
       </div>
 
@@ -163,7 +168,7 @@ function StatCard({ label, value, highlight }: { label: string; value: string; h
   );
 }
 
-function AddExpenseButton({ onSaved }: { onSaved: () => void }) {
+function AddExpenseButton({ unit, onSaved }: { unit: Unit; onSaved: () => void }) {
   const [open, setOpen] = useState(false);
   return (
     <>
@@ -175,6 +180,7 @@ function AddExpenseButton({ onSaved }: { onSaved: () => void }) {
       </button>
       {open && (
         <MaintenanceExpenseFormModal
+          unit={unit}
           onClose={() => setOpen(false)}
           onSaved={async () => {
             setOpen(false);
@@ -186,7 +192,7 @@ function AddExpenseButton({ onSaved }: { onSaved: () => void }) {
   );
 }
 
-function MaintenanceExpenseFormModal({ onClose, onSaved }: { onClose: () => void; onSaved: () => void }) {
+function MaintenanceExpenseFormModal({ unit, onClose, onSaved }: { unit: Unit; onClose: () => void; onSaved: () => void }) {
   const [category, setCategory] = useState<MaintenanceExpenseCategory>("food");
   const [amount, setAmount] = useState("");
   const [expenseDate, setExpenseDate] = useState(() => new Date().toISOString().slice(0, 10));
@@ -201,6 +207,7 @@ function MaintenanceExpenseFormModal({ onClose, onSaved }: { onClose: () => void
     try {
       await adminApi.createMaintenanceExpense({
         category,
+        unit,
         amount: Number(amount),
         expense_date: expenseDate,
         description,

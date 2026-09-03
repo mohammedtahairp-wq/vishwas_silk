@@ -8,6 +8,7 @@ interface NavItem {
   label: string;
   icon?: string;
   end?: boolean;
+  children?: { to: string; label: string }[];
 }
 
 function HamburgerIcon({ open }: { open: boolean }) {
@@ -101,6 +102,25 @@ export function PortalLayout({ title, navItems, mobileNav = "sidebar" }: { title
                 </>
               )}
             </NavLink>
+            {item.children && (item.children.length > 0) && (
+              <div className="ml-6 border-l border-gray-100 pl-2 my-1">
+                {item.children.map((child) => (
+                  <NavLink
+                    key={child.to}
+                    to={child.to}
+                    className={({ isActive }) =>
+                      `block mx-1 my-0.5 px-3 py-2 rounded-lg text-sm transition-all duration-200 ${
+                        isActive
+                          ? "bg-emerald-50 font-semibold text-emerald-700"
+                          : "text-gray-500 hover:text-gray-900 hover:bg-gray-50"
+                      }`
+                    }
+                  >
+                    {child.label}
+                  </NavLink>
+                ))}
+              </div>
+            )}
           </motion.div>
         ))}
       </nav>

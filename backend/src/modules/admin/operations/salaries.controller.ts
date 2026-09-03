@@ -4,11 +4,13 @@ import * as salariesService from "./salaries.service";
 
 const employeeCategorySchema = z.enum(["sheet_machine", "ovendry", "khalla_jala", "drivers_helpers"]);
 const salaryPaymentTypeSchema = z.enum(["advance", "salary"]);
+const unitSchema = z.enum(["kolar", "sidlagatta", "ramnagar"]);
 
 const createEmployeeSchema = z.object({
   name: z.string().min(1),
   phone: z.string().min(6).optional(),
   category: employeeCategorySchema,
+  unit: unitSchema,
   monthlySalary: z.number().nonnegative(),
 });
 
@@ -16,6 +18,7 @@ const updateEmployeeSchema = z.object({
   name: z.string().min(1).optional(),
   phone: z.string().min(6).nullable().optional(),
   category: employeeCategorySchema.optional(),
+  unit: unitSchema.optional(),
   monthlySalary: z.number().nonnegative().optional(),
   status: z.enum(["active", "inactive"]).optional(),
 });
@@ -39,15 +42,20 @@ export async function createEmployeeHandler(req: Request, res: Response) {
     name: body.name,
     phone: body.phone,
     category: body.category,
+    unit: body.unit,
     monthlySalary: body.monthlySalary,
   });
   res.status(201).json(employee);
 }
 
 export async function listEmployeesHandler(req: Request, res: Response) {
-  const { category } = req.query;
+  const { category, unit } = req.query;
   const parsed = employeeCategorySchema.safeParse(category);
-  const employees = await salariesService.listEmployees(parsed.success ? parsed.data : undefined);
+  const parsedUnit = unitSchema.safeParse(unit);
+  const employees = await salariesService.listEmployees(
+    parsed.success ? parsed.data : undefined,
+    parsedUnit.success ? parsedUnit.data : undefined
+  );
   res.json(employees);
 }
 
@@ -65,6 +73,7 @@ export async function deleteEmployeeHandler(req: Request, res: Response) {
 const recordPaymentSchema = z.object({
   employee_id: z.string().uuid(),
   type: salaryPaymentTypeSchema,
+  unit: unitSchema,
   amount: z.number().positive(),
   month: monthSchema,
   year: yearSchema,
@@ -80,6 +89,7 @@ export async function recordSalaryPaymentHandler(req: Request, res: Response) {
   const payment = await salariesService.recordSalaryPayment(req.user!.id, {
     employeeId: body.employee_id,
     type: body.type,
+    unit: body.unit,
     amount: body.amount,
     month: body.month,
     year: body.year,
@@ -90,7 +100,7 @@ export async function recordSalaryPaymentHandler(req: Request, res: Response) {
 }
 
 export async function listSalaryPaymentsHandler(req: Request, res: Response) {
-  const { employee_id, month, year, type, from, to } = req.query;
+  const { employee_id, month, year, type, unit, from, to } = req.query;
   const payments = await salariesService.listSalaryPayments({
     employeeId: typeof employee_id === "string" ? employee_id : undefined,
     month: month !== undefined ? monthSchema.parse(month) : undefined,
@@ -98,6 +108,7 @@ export async function listSalaryPaymentsHandler(req: Request, res: Response) {
     type: salaryPaymentTypeSchema.safeParse(type).success
       ? (type as "advance" | "salary")
       : undefined,
+    unit: unitSchema.safeParse(unit).success ? (unit as "kolar" | "sidlagatta" | "ramnagar") : undefined,
     from: queryDate(from),
     to: queryDate(to, true),
   });
@@ -111,8 +122,12 @@ export async function deleteSalaryPaymentHandler(req: Request, res: Response) {
 
 export async function salaryMonthSummaryHandler(req: Request, res: Response) {
   const query = z
-    .object({ month: monthSchema, year: yearSchema })
+    .object({
+      month: monthSchema,
+      year: yearSchema,
+      unit: unitSchema.optional(),
+    })
     .parse(req.query);
-  const summary = await salariesService.salaryMonthSummary(query.month, query.year);
+  const summary = await salariesService.salaryMonthSummary(query.month, query.year, query.unit);
   res.json(summary);
 }
