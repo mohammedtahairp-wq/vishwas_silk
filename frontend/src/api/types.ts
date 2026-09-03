@@ -309,3 +309,31 @@ export interface DieselLog {
   createdAt: string;
   vehicle?: { name: string; number: string };
 }
+
+export interface DieselLogAdmin extends DieselLog {
+  rider?: { name: string; phone: string | null };
+}
+
+export interface DieselLogSummary {
+  totalAmount: number;
+  totalKm: number;
+  count: number;
+}
+
+export interface VehicleReport {
+  vehicle: { id: string; name: string; number: string; unit: Unit };
+  dieselLogs: DieselLogAdmin[];
+  expenses: TransportExpense[];
+  totals: {
+    dieselLogAmount: number;
+    dieselExpenseAmount: number;
+    repairExpenseAmount: number;
+    totalKm: number;
+  };
+}
+
+export interface RiderReport {
+  rider: { id: string; name: string; phone: string | null };
+  dieselLogs: DieselLogAdmin[];
+  totals: { totalAmount: number; totalKm: number; count: number };
+}

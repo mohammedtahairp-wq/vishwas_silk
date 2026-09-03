@@ -204,3 +204,122 @@ export async function transportSummary(filter: TransportExpenseFilter): Promise<
     byVehicle: [...vehicleMap.values()].sort((a, b) => b.total - a.total),
   };
 }
+
+export interface DieselLogFilter {
+  vehicleId?: string;
+  riderId?: string;
+  unit?: Unit;
+  from?: Date;
+  to?: Date;
+}
+
+export async function listDieselLogs(filter: DieselLogFilter) {
+  return prisma.dieselLog.findMany({
+    where: {
+      vehicleId: filter.vehicleId,
+      riderId: filter.riderId,
+      unit: filter.unit,
+      dieselDate: filter.from || filter.to
+        ? { gte: filter.from, lte: filter.to }
+        : undefined,
+    },
+    include: {
+      vehicle: { select: { name: true, number: true } },
+      rider: { select: { name: true, phone: true } },
+    },
+    orderBy: [{ dieselDate: "desc" }, { createdAt: "desc" }],
+  });
+}
+
+export interface DieselLogSummary {
+  totalAmount: number;
+  totalKm: number;
+  count: number;
+}
+
+export async function dieselLogSummary(filter: DieselLogFilter): Promise<DieselLogSummary> {
+  const rows = await prisma.dieselLog.findMany({
+    where: {
+      vehicleId: filter.vehicleId,
+      riderId: filter.riderId,
+      unit: filter.unit,
+      dieselDate: filter.from || filter.to
+        ? { gte: filter.from, lte: filter.to }
+        : undefined,
+    },
+    select: { dieselAmount: true, kmRun: true },
+  });
+  return {
+    totalAmount: rows.reduce((s, r) => s + Number(r.dieselAmount), 0),
+    totalKm: rows.reduce((s, r) => s + Number(r.kmRun), 0),
+    count: rows.length,
+  };
+}
+
+export interface VehicleReport {
+  vehicle: { id: string; name: string; number: string; unit: Unit };
+  dieselLogs: Awaited<ReturnType<typeof listDieselLogs>>;
+  expenses: Awaited<ReturnType<typeof listTransportExpenses>>;
+  totals: {
+    dieselLogAmount: number;
+    dieselExpenseAmount: number;
+    repairExpenseAmount: number;
+    totalKm: number;
+  };
+}
+
+export async function vehicleReport(
+  vehicleId: string,
+  filter: { from?: Date; to?: Date } = {}
+): Promise<VehicleReport> {
+  const vehicle = await getVehicleById(vehicleId);
+  const [dieselLogs, expenses] = await Promise.all([
+    listDieselLogs({ vehicleId, from: filter.from, to: filter.to }),
+    listTransportExpenses({ vehicleId, from: filter.from, to: filter.to }),
+  ]);
+
+  const dieselLogAmount = dieselLogs.reduce((s, l) => s + Number(l.dieselAmount), 0);
+  const dieselExpenseAmount = expenses
+    .filter((e) => e.category === "diesel")
+    .reduce((s, e) => s + Number(e.amount), 0);
+  const repairExpenseAmount = expenses
+    .filter((e) => e.category === "repair")
+    .reduce((s, e) => s + Number(e.amount), 0);
+  const totalKm = dieselLogs.reduce((s, l) => s + Number(l.kmRun), 0);
+
+  return {
+    vehicle: { id: vehicle.id, name: vehicle.name, number: vehicle.number, unit: vehicle.unit },
+    dieselLogs,
+    expenses,
+    totals: { dieselLogAmount, dieselExpenseAmount, repairExpenseAmount, totalKm },
+  };
+}
+
+export interface RiderReport {
+  rider: { id: string; name: string; phone: string | null };
+  dieselLogs: Awaited<ReturnType<typeof listDieselLogs>>;
+  totals: {
+    totalAmount: number;
+    totalKm: number;
+    count: number;
+  };
+}
+
+export async function riderDieselReport(
+  riderId: string,
+  filter: { from?: Date; to?: Date } = {}
+): Promise<RiderReport> {
+  const rider = await prisma.rider.findUnique({ where: { id: riderId } });
+  if (!rider) throw new NotFoundError("Rider not found");
+
+  const dieselLogs = await listDieselLogs({ riderId, from: filter.from, to: filter.to });
+  return {
+    rider: { id: rider.id, name: rider.name, phone: rider.phone },
+    dieselLogs,
+    totals: {
+      totalAmount: dieselLogs.reduce((s, l) => s + Number(l.dieselAmount), 0),
+      totalKm: dieselLogs.reduce((s, l) => s + Number(l.kmRun), 0),
+      count: dieselLogs.length,
+    },
+  };
+}

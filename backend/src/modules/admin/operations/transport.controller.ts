@@ -131,3 +131,45 @@ export async function transportSummaryHandler(req: Request, res: Response) {
   });
   res.json(summary);
 }
+
+export async function listDieselLogsHandler(req: Request, res: Response) {
+  const { vehicle_id, rider_id, unit, from, to } = req.query;
+  const logs = await transportService.listDieselLogs({
+    vehicleId: typeof vehicle_id === "string" ? vehicle_id : undefined,
+    riderId: typeof rider_id === "string" ? rider_id : undefined,
+    unit: unitSchema.safeParse(unit).success ? (unit as "kolar" | "sidlagatta" | "ramnagar") : undefined,
+    from: queryDate(from),
+    to: queryDate(to, true),
+  });
+  res.json(logs);
+}
+
+export async function dieselLogSummaryHandler(req: Request, res: Response) {
+  const { vehicle_id, rider_id, unit, from, to } = req.query;
+  const summary = await transportService.dieselLogSummary({
+    vehicleId: typeof vehicle_id === "string" ? vehicle_id : undefined,
+    riderId: typeof rider_id === "string" ? rider_id : undefined,
+    unit: unitSchema.safeParse(unit).success ? (unit as "kolar" | "sidlagatta" | "ramnagar") : undefined,
+    from: queryDate(from),
+    to: queryDate(to, true),
+  });
+  res.json(summary);
+}
+
+export async function vehicleReportHandler(req: Request, res: Response) {
+  const { from, to } = req.query;
+  const report = await transportService.vehicleReport(req.params.id, {
+    from: queryDate(from),
+    to: queryDate(to, true),
+  });
+  res.json(report);
+}
+
+export async function riderDieselReportHandler(req: Request, res: Response) {
+  const { from, to } = req.query;
+  const report = await transportService.riderDieselReport(req.params.id, {
+    from: queryDate(from),
+    to: queryDate(to, true),
+  });
+  res.json(report);
+}

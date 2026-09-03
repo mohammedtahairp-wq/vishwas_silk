@@ -4,6 +4,8 @@ import type {
   CreateCustomerResult,
   CreateRiderResult,
   Customer,
+  DieselLogAdmin,
+  DieselLogSummary,
   Employee,
   MaintenanceExpense,
   MaintenanceSummary,
@@ -12,6 +14,7 @@ import type {
   Price,
   Product,
   Rider,
+  RiderReport,
   SalaryMonthSummary,
   SalaryPayment,
   SettlementPreview,
@@ -20,6 +23,7 @@ import type {
   TransportExpense,
   TransportSummary,
   Vehicle,
+  VehicleReport,
 } from "./types";
 
 export const adminApi = {
@@ -145,6 +149,15 @@ export const adminApi = {
     apiClient.delete(`/admin/operations/transport/expenses/${id}`).then((r) => r.data),
   transportSummary: (params?: { unit?: string; from?: string; to?: string }) =>
     apiClient.get<TransportSummary>("/admin/operations/transport/expenses/summary", { params }).then((r) => r.data),
+
+  listDieselLogs: (params?: { vehicle_id?: string; rider_id?: string; unit?: string; from?: string; to?: string }) =>
+    apiClient.get<DieselLogAdmin[]>("/admin/operations/transport/diesel-logs", { params }).then((r) => r.data),
+  dieselLogSummary: (params?: { vehicle_id?: string; rider_id?: string; unit?: string; from?: string; to?: string }) =>
+    apiClient.get<DieselLogSummary>("/admin/operations/transport/diesel-logs/summary", { params }).then((r) => r.data),
+  vehicleReport: (id: string, params?: { from?: string; to?: string }) =>
+    apiClient.get<VehicleReport>(`/admin/operations/transport/vehicles/${id}/report`, { params }).then((r) => r.data),
+  riderDieselReport: (id: string, params?: { from?: string; to?: string }) =>
+    apiClient.get<RiderReport>(`/admin/operations/transport/riders/${id}/diesel-report`, { params }).then((r) => r.data),
 
   // ---- Operations: Maintenance ----
   createMaintenanceExpense: (data: {

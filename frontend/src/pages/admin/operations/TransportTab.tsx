@@ -4,22 +4,36 @@ import { adminApi } from "../../../api/admin.api";
 import { apiErrorMessage } from "../../../api/client";
 import {
   TRANSPORT_CATEGORY_LABELS,
+  type DieselLogAdmin,
+  type DieselLogSummary,
+  type Rider,
+  type RiderReport,
   type TransportExpense,
   type TransportExpenseCategory,
   type TransportSummary,
   type Unit,
   type Vehicle,
+  type VehicleReport,
 } from "../../../api/types";
 import { Modal } from "../../../components/Modal";
 import { inrCurrency } from "../dashboard/format";
+
+function number2(value: number) {
+  return value.toLocaleString("en-IN", { maximumFractionDigits: 2 });
+}
 
 export function TransportTab({ unit }: { unit?: Unit }) {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [expenses, setExpenses] = useState<TransportExpense[]>([]);
   const [summary, setSummary] = useState<TransportSummary | null>(null);
+  const [dieselLogs, setDieselLogs] = useState<DieselLogAdmin[]>([]);
+  const [dieselSummary, setDieselSummary] = useState<DieselLogSummary | null>(null);
+  const [riders, setRiders] = useState<Rider[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [showAddVehicle, setShowAddVehicle] = useState(false);
   const [editingVehicle, setEditingVehicle] = useState<Vehicle | null>(null);
+  const [showVehicleReport, setShowVehicleReport] = useState(false);
+  const [showRiderReport, setShowRiderReport] = useState(false);
 
   const [filterVehicle, setFilterVehicle] = useState("");
   const [filterCategory, setFilterCategory] = useState<"" | TransportExpenseCategory>("");
@@ -34,7 +48,7 @@ export function TransportTab({ unit }: { unit?: Unit }) {
       if (filterCategory) params.category = filterCategory;
       if (filterFrom) params.from = filterFrom;
       if (filterTo) params.to = filterTo;
-      const [v, e, s] = await Promise.all([
+      const [v, e, s, dl, dls, r] = await Promise.all([
         adminApi.listVehicles(unit ? { unit } : undefined),
         adminApi.listTransportExpenses(
           Object.keys(params).length ? (params as Parameters<typeof adminApi.listTransportExpenses>[0]) : undefined
@@ -44,10 +58,24 @@ export function TransportTab({ unit }: { unit?: Unit }) {
             ? { unit: unit ?? undefined, from: filterFrom || undefined, to: filterTo || undefined }
             : undefined
         ),
+        adminApi.listDieselLogs(
+          unit || filterFrom || filterTo || filterVehicle
+            ? { unit: unit ?? undefined, vehicle_id: filterVehicle || undefined, from: filterFrom || undefined, to: filterTo || undefined }
+            : undefined
+        ),
+        adminApi.dieselLogSummary(
+          unit || filterFrom || filterTo || filterVehicle
+            ? { unit: unit ?? undefined, vehicle_id: filterVehicle || undefined, from: filterFrom || undefined, to: filterTo || undefined }
+            : undefined
+        ),
+        adminApi.listRiders(),
       ]);
       setVehicles(v);
       setExpenses(e);
       setSummary(s);
+      setDieselLogs(dl);
+      setDieselSummary(dls);
+      setRiders(r);
       setError(null);
     } catch (err) {
       setError(apiErrorMessage(err, "Could not load transport data."));
@@ -80,6 +108,18 @@ export function TransportTab({ unit }: { unit?: Unit }) {
           + Add Vehicle
         </button>
         <AddExpenseButton vehicles={vehicles} unit={unit as Unit} onSaved={load} />
+        <button
+          onClick={() => setShowVehicleReport(true)}
+          className="bg-white border border-blue-600 text-blue-700 hover:bg-blue-50 rounded px-4 py-1.5 text-sm font-medium"
+        >
+          Vehicle Report
+        </button>
+        <button
+          onClick={() => setShowRiderReport(true)}
+          className="bg-white border border-purple-600 text-purple-700 hover:bg-purple-50 rounded px-4 py-1.5 text-sm font-medium"
+        >
+          Rider Report
+        </button>
         {error && <p className="text-sm text-red-600">{error}</p>}
       </div>
 
@@ -208,6 +248,63 @@ export function TransportTab({ unit }: { unit?: Unit }) {
       </div>
 
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-x-auto">
+        <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+          <h2 className="font-semibold text-gray-800">Rider Diesel Fills</h2>
+          <span className="text-sm text-gray-400">{dieselLogs.length}</span>
+        </div>
+        {dieselSummary && (
+          <div className="px-4 py-3 border-b border-gray-100 grid grid-cols-3 gap-3 bg-emerald-50/50">
+            <div>
+              <p className="text-xs text-gray-500">Total Diesel Amount</p>
+              <p className="text-lg font-semibold text-gray-900">{inrCurrency(dieselSummary.totalAmount)}</p>
+            </div>
+            <div>
+              <p className="text-xs text-gray-500">Total KM Run</p>
+              <p className="text-lg font-semibold text-gray-900">{number2(dieselSummary.totalKm)} km</p>
+            </div>
+            <div>
+              <p className="text-xs text-gray-500">Entries</p>
+              <p className="text-lg font-semibold text-gray-900">{dieselSummary.count}</p>
+            </div>
+          </div>
+        )}
+        <table className="min-w-full text-sm">
+          <thead className="bg-gray-50 text-gray-600 text-left">
+            <tr>
+              <th className="px-4 py-2">Date</th>
+              <th className="px-4 py-2">Rider</th>
+              <th className="px-4 py-2">Vehicle</th>
+              <th className="px-4 py-2 text-right">Diesel (₹)</th>
+              <th className="px-4 py-2 text-right">Start KM</th>
+              <th className="px-4 py-2 text-right">End KM</th>
+              <th className="px-4 py-2 text-right">KM Run</th>
+            </tr>
+          </thead>
+          <tbody>
+            {dieselLogs.length === 0 ? (
+              <tr>
+                <td className="px-4 py-4 text-gray-400" colSpan={7}>
+                  No rider diesel fills recorded yet.
+                </td>
+              </tr>
+            ) : (
+              dieselLogs.map((log) => (
+                <tr key={log.id} className="border-t border-gray-100 hover:bg-gray-50">
+                  <td className="px-4 py-2 whitespace-nowrap">{new Date(`${log.dieselDate.slice(0, 10)}T00:00:00`).toLocaleDateString("en-IN")}</td>
+                  <td className="px-4 py-2 font-medium text-gray-800">{log.rider?.name ?? "—"}</td>
+                  <td className="px-4 py-2">{log.vehicle ? `${log.vehicle.name} (${log.vehicle.number})` : "—"}</td>
+                  <td className="px-4 py-2 text-right">{inrCurrency(Number(log.dieselAmount))}</td>
+                  <td className="px-4 py-2 text-right">{number2(Number(log.startKm))}</td>
+                  <td className="px-4 py-2 text-right">{number2(Number(log.endKm))}</td>
+                  <td className="px-4 py-2 text-right font-semibold text-emerald-700">{number2(Number(log.kmRun))} km</td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-x-auto">
         <div className="px-4 py-3 border-b border-gray-100">
           <h2 className="font-semibold text-gray-800">Expenses</h2>
         </div>
@@ -273,6 +370,21 @@ export function TransportTab({ unit }: { unit?: Unit }) {
             setEditingVehicle(null);
             await load();
           }}
+        />
+      )}
+
+      {showVehicleReport && (
+        <VehicleReportModal
+          vehicles={vehicles}
+          unit={unit as Unit}
+          onClose={() => setShowVehicleReport(false)}
+        />
+      )}
+
+      {showRiderReport && (
+        <RiderReportModal
+          riders={riders}
+          onClose={() => setShowRiderReport(false)}
         />
       )}
     </div>
@@ -474,6 +586,262 @@ function TransportExpenseFormModal({
           </button>
         </div>
       </form>
+    </Modal>
+  );
+}
+
+function VehicleReportModal({
+  vehicles,
+  unit,
+  onClose,
+}: {
+  vehicles: Vehicle[];
+  unit: Unit;
+  onClose: () => void;
+}) {
+  const [vehicleId, setVehicleId] = useState(vehicles[0]?.id ?? "");
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
+  const [report, setReport] = useState<VehicleReport | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function loadReport() {
+    if (!vehicleId) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const params: { from?: string; to?: string } = {};
+      if (from) params.from = from;
+      if (to) params.to = to;
+      const data = await adminApi.vehicleReport(vehicleId, Object.keys(params).length ? params : undefined);
+      setReport(data);
+    } catch (err) {
+      setError(apiErrorMessage(err, "Could not load vehicle report."));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    if (vehicleId) loadReport();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [vehicleId]);
+
+  const vehicle = vehicles.find((v) => v.id === vehicleId);
+
+  return (
+    <Modal title="Vehicle Report" onClose={onClose}>
+      <div className="space-y-3">
+        <div>
+          <label className="block text-xs font-medium text-gray-600 mb-1">Vehicle</label>
+          <select className="w-full border border-gray-300 rounded px-2 py-1.5" value={vehicleId} onChange={(e) => setVehicleId(e.target.value)}>
+            {vehicles.map((v) => (
+              <option key={v.id} value={v.id}>{v.name} ({v.number})</option>
+            ))}
+          </select>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <label className="block text-xs font-medium text-gray-600">
+            From
+            <input type="date" className="mt-1 w-full border border-gray-300 rounded px-2 py-1.5" value={from} onChange={(e) => setFrom(e.target.value)} />
+          </label>
+          <label className="block text-xs font-medium text-gray-600">
+            To
+            <input type="date" className="mt-1 w-full border border-gray-300 rounded px-2 py-1.5" value={to} onChange={(e) => setTo(e.target.value)} />
+          </label>
+        </div>
+        {from && to && (
+          <button onClick={loadReport} className="w-full rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">
+            Apply Date Range
+          </button>
+        )}
+
+        {error && <p className="rounded bg-red-50 p-2 text-sm text-red-700">{error}</p>}
+        {loading && <p className="text-center text-sm text-gray-500 py-4">Loading report...</p>}
+
+        {report && !loading && (
+          <div className="space-y-3">
+            {vehicle && (
+              <div className="rounded-lg bg-gray-50 p-3 text-center">
+                <p className="text-sm font-semibold text-gray-900">{vehicle.name} ({vehicle.number})</p>
+                <p className="text-xs text-gray-500">{unit ? `${unit.toUpperCase()} unit` : "All units"}</p>
+              </div>
+            )}
+            <div className="grid grid-cols-2 gap-2 text-center">
+              <div className="rounded-lg border border-gray-200 p-2">
+                <p className="text-xs text-gray-500">Rider Diesel Fills</p>
+                <p className="font-semibold text-emerald-700">{inrCurrency(report.totals.dieselLogAmount)}</p>
+              </div>
+              <div className="rounded-lg border border-gray-200 p-2">
+                <p className="text-xs text-gray-500">Admin Diesel</p>
+                <p className="font-semibold text-amber-700">{inrCurrency(report.totals.dieselExpenseAmount)}</p>
+              </div>
+              <div className="rounded-lg border border-gray-200 p-2">
+                <p className="text-xs text-gray-500">Repairs</p>
+                <p className="font-semibold text-purple-700">{inrCurrency(report.totals.repairExpenseAmount)}</p>
+              </div>
+              <div className="rounded-lg border border-gray-200 p-2">
+                <p className="text-xs text-gray-500">Total KM Run</p>
+                <p className="font-semibold text-gray-900">{number2(report.totals.totalKm)} km</p>
+              </div>
+            </div>
+
+            <div>
+              <p className="mb-1 text-sm font-semibold text-gray-700">Rider Diesel Fills ({report.dieselLogs.length})</p>
+              <div className="max-h-40 overflow-y-auto rounded border border-gray-200">
+                <table className="min-w-full text-xs">
+                  <thead className="bg-gray-50 text-gray-600 text-left sticky top-0">
+                    <tr>
+                      <th className="px-2 py-1">Date</th>
+                      <th className="px-2 py-1">Rider</th>
+                      <th className="px-2 py-1 text-right">Amount</th>
+                      <th className="px-2 py-1 text-right">KM Run</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {report.dieselLogs.length === 0 ? (
+                      <tr><td colSpan={4} className="px-2 py-3 text-gray-400 text-center">No diesel fills.</td></tr>
+                    ) : report.dieselLogs.map((log) => (
+                      <tr key={log.id} className="border-t border-gray-100">
+                        <td className="px-2 py-1 whitespace-nowrap">{new Date(`${log.dieselDate.slice(0, 10)}T00:00:00`).toLocaleDateString("en-IN")}</td>
+                        <td className="px-2 py-1">{log.rider?.name ?? "—"}</td>
+                        <td className="px-2 py-1 text-right">{inrCurrency(Number(log.dieselAmount))}</td>
+                        <td className="px-2 py-1 text-right">{number2(Number(log.kmRun))} km</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div>
+              <p className="mb-1 text-sm font-semibold text-gray-700">All Expenses: Diesel & Repair ({report.expenses.length})</p>
+              <div className="max-h-40 overflow-y-auto rounded border border-gray-200">
+                <table className="min-w-full text-xs">
+                  <thead className="bg-gray-50 text-gray-600 text-left sticky top-0">
+                    <tr>
+                      <th className="px-2 py-1">Date</th>
+                      <th className="px-2 py-1">Type</th>
+                      <th className="px-2 py-1 text-right">Amount</th>
+                      <th className="px-2 py-1">Description</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {report.expenses.length === 0 ? (
+                      <tr><td colSpan={4} className="px-2 py-3 text-gray-400 text-center">No expenses.</td></tr>
+                    ) : report.expenses.map((ex) => (
+                      <tr key={ex.id} className="border-t border-gray-100">
+                        <td className="px-2 py-1 whitespace-nowrap">{new Date(ex.expenseDate).toLocaleDateString("en-IN")}</td>
+                        <td className="px-2 py-1">
+                          <span className={`px-1.5 py-0.5 rounded-full text-xs ${ex.category === "diesel" ? "bg-amber-100 text-amber-700" : "bg-purple-100 text-purple-700"}`}>
+                            {TRANSPORT_CATEGORY_LABELS[ex.category]}
+                          </span>
+                        </td>
+                        <td className="px-2 py-1 text-right">{inrCurrency(Number(ex.amount))}</td>
+                        <td className="px-2 py-1 text-gray-500">{ex.description || "—"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </Modal>
+  );
+}
+
+function RiderReportModal({
+  riders,
+  onClose,
+}: {
+  riders: Rider[];
+  onClose: () => void;
+}) {
+  const [riderId, setRiderId] = useState(riders[0]?.id ?? "");
+  const [report, setReport] = useState<RiderReport | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!riderId) return;
+    setLoading(true);
+    setError(null);
+    adminApi.riderDieselReport(riderId)
+      .then(setReport)
+      .catch((err) => setError(apiErrorMessage(err, "Could not load rider report.")))
+      .finally(() => setLoading(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [riderId]);
+
+  return (
+    <Modal title="Rider Report (which vehicle on which days)" onClose={onClose}>
+      <div className="space-y-3">
+        <div>
+          <label className="block text-xs font-medium text-gray-600 mb-1">Rider</label>
+          <select className="w-full border border-gray-300 rounded px-2 py-1.5" value={riderId} onChange={(e) => setRiderId(e.target.value)}>
+            {riders.map((r) => (
+              <option key={r.id} value={r.id}>{r.name}</option>
+            ))}
+          </select>
+        </div>
+
+        {error && <p className="rounded bg-red-50 p-2 text-sm text-red-700">{error}</p>}
+        {loading && <p className="text-center text-sm text-gray-500 py-4">Loading report...</p>}
+
+        {report && !loading && (
+          <>
+            <div className="rounded-lg bg-purple-50 p-3 text-center">
+              <p className="text-sm font-semibold text-purple-800">{report.rider.name}</p>
+              <p className="text-xs text-gray-500">{report.rider.phone}</p>
+            </div>
+            <div className="grid grid-cols-3 gap-2 text-center">
+              <div className="rounded-lg border border-gray-200 p-2">
+                <p className="text-xs text-gray-500">Fills</p>
+                <p className="font-semibold text-gray-900">{report.totals.count}</p>
+              </div>
+              <div className="rounded-lg border border-gray-200 p-2">
+                <p className="text-xs text-gray-500">Diesel Total</p>
+                <p className="font-semibold text-emerald-700">{inrCurrency(report.totals.totalAmount)}</p>
+              </div>
+              <div className="rounded-lg border border-gray-200 p-2">
+                <p className="text-xs text-gray-500">KM Run</p>
+                <p className="font-semibold text-gray-900">{number2(report.totals.totalKm)} km</p>
+              </div>
+            </div>
+            <div className="rounded border border-gray-200">
+              <table className="min-w-full text-xs">
+                <thead className="bg-gray-50 text-gray-600 text-left">
+                  <tr>
+                    <th className="px-2 py-1">Date</th>
+                    <th className="px-2 py-1">Vehicle</th>
+                    <th className="px-2 py-1 text-right">Amount</th>
+                    <th className="px-2 py-1 text-right">Start KM</th>
+                    <th className="px-2 py-1 text-right">End KM</th>
+                    <th className="px-2 py-1 text-right">KM Run</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {report.dieselLogs.length === 0 ? (
+                    <tr><td colSpan={6} className="px-2 py-4 text-gray-400 text-center">No diesel fills for this rider.</td></tr>
+                  ) : report.dieselLogs.map((log) => (
+                    <tr key={log.id} className="border-t border-gray-100">
+                      <td className="px-2 py-1 whitespace-nowrap">{new Date(`${log.dieselDate.slice(0, 10)}T00:00:00`).toLocaleDateString("en-IN")}</td>
+                      <td className="px-2 py-1 font-medium">{log.vehicle ? `${log.vehicle.name} (${log.vehicle.number})` : "—"}</td>
+                      <td className="px-2 py-1 text-right">{inrCurrency(Number(log.dieselAmount))}</td>
+                      <td className="px-2 py-1 text-right">{number2(Number(log.startKm))}</td>
+                      <td className="px-2 py-1 text-right">{number2(Number(log.endKm))}</td>
+                      <td className="px-2 py-1 text-right font-semibold text-emerald-700">{number2(Number(log.kmRun))} km</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
+      </div>
     </Modal>
   );
 }
