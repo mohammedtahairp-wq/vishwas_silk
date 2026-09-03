@@ -257,6 +257,11 @@ export function PortalLayout({ title, navItems, mobileNav = "sidebar" }: { title
                       <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                   )}
+                  {item.label === "Diesel Fill" && (
+                    <svg className="w-5 h-5 mb-0.5" fill={isActive ? "currentColor" : "none"} viewBox="0 0 24 24" stroke="currentColor" strokeWidth={isActive ? 0 : 1.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M4 4h9a1 1 0 011 1v15M4 9h11M14 5l6 4M19 15a2 2 0 100-4 2 2 0 000 4zM19 19v1M3 20h12" />
+                    </svg>
+                  )}
                   <span className="text-[10px] leading-tight truncate max-w-full px-1">
                     {item.label === "Customer Product History" ? "History" : item.label}
                   </span>
