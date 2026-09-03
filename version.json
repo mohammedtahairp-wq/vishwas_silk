@@ -1,6 +1,6 @@
 {
-  "versionName": "1.8.0",
-  "versionCode": 18,
+  "versionName": "1.9.0",
+  "versionCode": 19,
   "downloadUrl": "https://vishwassilk.com/vishwassilk.apk",
-  "releaseNotes": "Faster and more reliable login with the new OTP system."
+  "releaseNotes": "New Diesel Fill feature: log diesel amount and start/end KM per vehicle."
 }
