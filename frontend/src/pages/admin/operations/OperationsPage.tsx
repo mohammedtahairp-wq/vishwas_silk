@@ -1,10 +1,12 @@
 import { useState } from "react";
+import { AttendanceTab } from "./AttendanceTab";
 import { SalaryTab } from "./SalaryTab";
 import { TransportTab } from "./TransportTab";
 import { MaintenanceTab } from "./MaintenanceTab";
 
 const TABS = [
   { key: "salary", label: "Salary" },
+  { key: "attendance", label: "Attendance" },
   { key: "transport", label: "Transport" },
   { key: "maintenance", label: "Maintenance" },
 ] as const;
@@ -34,6 +36,7 @@ export function OperationsPage() {
       </div>
 
       {tab === "salary" && <SalaryTab />}
+      {tab === "attendance" && <AttendanceTab />}
       {tab === "transport" && <TransportTab />}
       {tab === "maintenance" && <MaintenanceTab />}
     </div>

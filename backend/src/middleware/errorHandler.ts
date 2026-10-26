@@ -14,6 +14,16 @@ export function errorHandler(err: unknown, _req: Request, res: Response, _next: 
 
   if (err instanceof Prisma.PrismaClientKnownRequestError) {
     if (err.code === "P2002") {
+      const target = Array.isArray(err.meta?.target) ? (err.meta.target as string[]) : [];
+      if (target.includes("serial_number")) {
+        return res.status(409).json({ error: "That serial number is already in use by another customer" });
+      }
+      if (target.includes("login_phone")) {
+        return res.status(409).json({ error: "That phone number is already in use for login" });
+      }
+      if (target.includes("phone")) {
+        return res.status(409).json({ error: "A record with that phone number already exists" });
+      }
       return res.status(409).json({ error: "A record with these unique fields already exists" });
     }
     if (err.code === "P2025") {

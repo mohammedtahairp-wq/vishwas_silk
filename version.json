@@ -1,6 +1,6 @@
 {
-  "versionName": "1.9.0",
-  "versionCode": 19,
+  "versionName": "1.10.0",
+  "versionCode": 20,
   "downloadUrl": "https://vishwassilk.com/vishwassilk.apk",
-  "releaseNotes": "New Diesel Fill feature: log diesel amount and start/end KM per vehicle."
+  "releaseNotes": "Attendance tracking and overtime (OT) pay, plus a customer creation fix."
 }

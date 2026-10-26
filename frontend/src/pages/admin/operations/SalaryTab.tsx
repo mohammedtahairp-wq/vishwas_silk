@@ -42,7 +42,7 @@ export function SalaryTab({ unit }: { unit?: Unit }) {
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
   const [payDialog, setPayDialog] = useState<{
     row: SalaryMonthSummary["rows"][number];
-    type: "advance" | "salary";
+    type: "advance" | "salary" | "ot";
   } | null>(null);
 
   async function load() {
@@ -118,8 +118,8 @@ export function SalaryTab({ unit }: { unit?: Unit }) {
         <>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <StatCard label="Total Monthly Salary" value={inrCurrency(summary.grandTotals.monthlySalary)} />
-            <StatCard label="Taken Mid-Month" value={inrCurrency(summary.grandTotals.advanceTotal)} />
-            <StatCard label="Paid at Month End" value={inrCurrency(summary.grandTotals.salaryPaidTotal)} />
+            <StatCard label="Attendance Deduction" value={inrCurrency(summary.grandTotals.attendanceDeduction)} />
+            <StatCard label="Overtime (OT) Total" value={inrCurrency(summary.grandTotals.otTotal)} highlight />
             <StatCard label="Remaining to Pay" value={inrCurrency(summary.grandTotals.remaining)} highlight />
           </div>
 
@@ -134,7 +134,10 @@ export function SalaryTab({ unit }: { unit?: Unit }) {
                 <tr>
                   <th className="px-4 py-2">Employee</th>
                   <th className="px-4 py-2">Category</th>
-                  <th className="px-4 py-2 text-right">Monthly Salary</th>
+                  <th className="px-4 py-2 text-center">Days (P/A)</th>
+                  <th className="px-4 py-2 text-right">Salary</th>
+                  <th className="px-4 py-2 text-right">Attendance Ded.</th>
+                  <th className="px-4 py-2 text-right">OT</th>
                   <th className="px-4 py-2 text-right">Taken Mid-Month</th>
                   <th className="px-4 py-2 text-right">Paid at End</th>
                   <th className="px-4 py-2 text-right">Remaining</th>
@@ -144,7 +147,7 @@ export function SalaryTab({ unit }: { unit?: Unit }) {
               <tbody>
                 {summary.rows.length === 0 ? (
                   <tr>
-                    <td className="px-4 py-4 text-gray-400" colSpan={7}>
+                    <td className="px-4 py-4 text-gray-400" colSpan={10}>
                       No employees yet. Click "Add Employee" to create one.
                     </td>
                   </tr>
@@ -158,13 +161,26 @@ export function SalaryTab({ unit }: { unit?: Unit }) {
                         )}
                       </td>
                       <td className="px-4 py-2">{EMPLOYEE_CATEGORY_LABELS[row.category]}</td>
+                      <td className="px-4 py-2 text-center text-xs">
+                        <span className="text-emerald-600">{row.presentDays}</span>
+                        <span className="text-gray-400"> / </span>
+                        <span className="text-red-500">{row.absentDays}</span>
+                      </td>
                       <td className="px-4 py-2 text-right">{inrCurrency(row.monthlySalary)}</td>
+                      <td className="px-4 py-2 text-right text-red-600">{row.attendanceDeduction > 0 ? "-" + inrCurrency(row.attendanceDeduction) : "—"}</td>
+                      <td className="px-4 py-2 text-right text-amber-600">{row.otTotal > 0 ? "+" + inrCurrency(row.otTotal) : "—"}</td>
                       <td className="px-4 py-2 text-right">{inrCurrency(row.advanceTotal)}</td>
                       <td className="px-4 py-2 text-right">{inrCurrency(row.salaryPaidTotal)}</td>
                       <td className={`px-4 py-2 text-right font-medium ${row.remaining > 0 ? "text-orange-600" : "text-emerald-600"}`}>
                         {inrCurrency(row.remaining)}
                       </td>
                       <td className="px-4 py-2 text-right space-x-2 whitespace-nowrap">
+                        <button
+                          onClick={() => setPayDialog({ row, type: "ot" })}
+                          className="text-amber-600 hover:underline"
+                        >
+                          OT
+                        </button>
                         <button
                           onClick={() => setPayDialog({ row, type: "advance" })}
                           className="text-blue-600 hover:underline"
@@ -260,8 +276,14 @@ export function SalaryTab({ unit }: { unit?: Unit }) {
                   <td className="px-4 py-2">{new Date(p.paymentDate).toLocaleDateString("en-IN")}</td>
                   <td className="px-4 py-2">{p.employee?.name ?? "—"}</td>
                   <td className="px-4 py-2">
-                    <span className={`px-2 py-0.5 rounded-full text-xs ${p.type === "advance" ? "bg-blue-100 text-blue-700" : "bg-emerald-100 text-emerald-700"}`}>
-                      {p.type === "advance" ? "Mid-month advance" : "Month-end salary"}
+                    <span className={`px-2 py-0.5 rounded-full text-xs ${
+                      p.type === "advance"
+                        ? "bg-blue-100 text-blue-700"
+                        : p.type === "ot"
+                        ? "bg-amber-100 text-amber-700"
+                        : "bg-emerald-100 text-emerald-700"
+                    }`}>
+                      {p.type === "advance" ? "Mid-month advance" : p.type === "ot" ? "Overtime (OT)" : "Month-end salary"}
                     </span>
                   </td>
                   <td className="px-4 py-2 text-right">{inrCurrency(Number(p.amount))}</td>
@@ -314,6 +336,8 @@ export function SalaryTab({ unit }: { unit?: Unit }) {
           suggestedAmount={
             payDialog.type === "salary"
               ? Math.max(payDialog.row.remaining, 0)
+              : payDialog.type === "ot"
+              ? 0
               : payDialog.row.remaining
           }
           onClose={() => setPayDialog(null)}
@@ -467,7 +491,7 @@ function PaySalaryModal({
 }: {
   employeeId: string;
   employeeName: string;
-  type: "advance" | "salary";
+  type: "advance" | "salary" | "ot";
   unit: Unit;
   month: number;
   year: number;
@@ -475,7 +499,7 @@ function PaySalaryModal({
   onClose: () => void;
   onSaved: () => void;
 }) {
-  const [amount, setAmount] = useState(String(suggestedAmount));
+  const [amount, setAmount] = useState(type === "ot" ? "" : String(suggestedAmount));
   const [paymentDate, setPaymentDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [note, setNote] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -505,27 +529,43 @@ function PaySalaryModal({
 
   return (
     <Modal
-      title={type === "advance" ? `Record advance — ${employeeName}` : `Pay month-end salary — ${employeeName}`}
+      title={
+        type === "advance"
+          ? `Record advance — ${employeeName}`
+          : type === "ot"
+          ? `Add overtime (OT) — ${employeeName}`
+          : `Pay month-end salary — ${employeeName}`
+      }
       onClose={onClose}
     >
       <form onSubmit={save} className="space-y-3">
         <p className="text-sm text-gray-500">
           {type === "advance"
             ? `Amount taken mid-month for ${MONTH_NAMES[month - 1]} ${year}. It will be deducted from the month-end salary.`
+            : type === "ot"
+            ? `Extra amount for overtime done in ${MONTH_NAMES[month - 1]} ${year}. This is added to the total salary.`
             : `Final salary payment for ${MONTH_NAMES[month - 1]} ${year}, after deducting mid-month advances.`}
         </p>
         <div>
           <label className="block text-xs font-medium text-gray-600 mb-1">Amount (₹)</label>
           <input type="number" min="0.01" step="0.01" className="w-full border border-gray-300 rounded px-2 py-1.5" value={amount} onChange={(e) => setAmount(e.target.value)} required />
         </div>
+        {type === "ot" && (
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">Description (OT) — required</label>
+            <input className="w-full border border-gray-300 rounded px-2 py-1.5" value={note} onChange={(e) => setNote(e.target.value)} placeholder="e.g. Overtime on 12 Sep" required />
+          </div>
+        )}
         <div>
           <label className="block text-xs font-medium text-gray-600 mb-1">Payment date</label>
           <input type="date" className="w-full border border-gray-300 rounded px-2 py-1.5" value={paymentDate} onChange={(e) => setPaymentDate(e.target.value)} required />
         </div>
-        <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">Note (optional)</label>
-          <input className="w-full border border-gray-300 rounded px-2 py-1.5" value={note} onChange={(e) => setNote(e.target.value)} />
-        </div>
+        {type !== "ot" && (
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">Note (optional)</label>
+            <input className="w-full border border-gray-300 rounded px-2 py-1.5" value={note} onChange={(e) => setNote(e.target.value)} />
+          </div>
+        )}
         {error && <p className="text-sm text-red-600">{error}</p>}
         <div className="flex justify-end gap-2 pt-2">
           <button type="button" onClick={onClose} className="rounded px-4 py-1.5 text-gray-600 hover:bg-gray-100">

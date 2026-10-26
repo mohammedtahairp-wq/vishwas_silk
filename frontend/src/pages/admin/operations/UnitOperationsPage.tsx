@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useParams, Navigate } from "react-router-dom";
 import { UNIT_LABELS, type Unit } from "../../../api/types";
+import { AttendanceTab } from "./AttendanceTab";
 import { SalaryTab } from "./SalaryTab";
 import { TransportTab } from "./TransportTab";
 import { MaintenanceTab } from "./MaintenanceTab";
@@ -9,6 +10,7 @@ const VALID_UNITS = new Set<Unit>(["kolar", "sidlagatta", "ramnagar"]);
 
 const OPS_TABS = [
   { key: "salary", label: "Salary" },
+  { key: "attendance", label: "Attendance" },
   { key: "transport", label: "Transport" },
   { key: "maintenance", label: "Maintenance" },
 ] as const;
@@ -48,6 +50,7 @@ export function UnitOperationsPage() {
       </div>
 
       {tab === "salary" && <SalaryTab unit={unitKey} />}
+      {tab === "attendance" && <AttendanceTab unit={unitKey} />}
       {tab === "transport" && <TransportTab unit={unitKey} />}
       {tab === "maintenance" && <MaintenanceTab unit={unitKey} />}
     </div>

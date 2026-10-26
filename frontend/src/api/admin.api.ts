@@ -1,5 +1,6 @@
 import { apiClient } from "./client";
 import type {
+  Attendance,
   City,
   CreateCustomerResult,
   CreateRiderResult,
@@ -110,7 +111,7 @@ export const adminApi = {
     apiClient.get<SalaryMonthSummary>("/admin/operations/salaries/summary", { params }).then((r) => r.data),
   recordSalaryPayment: (data: {
     employee_id: string;
-    type: "advance" | "salary";
+    type: "advance" | "salary" | "ot";
     unit: string;
     amount: number;
     month: number;
@@ -119,10 +120,17 @@ export const adminApi = {
     note?: string;
   }) =>
     apiClient.post<SalaryPayment>("/admin/operations/salaries/payments", data).then((r) => r.data),
-  listSalaryPayments: (params?: { employee_id?: string; month?: number; year?: number; type?: "advance" | "salary"; unit?: string }) =>
+  listSalaryPayments: (params?: { employee_id?: string; month?: number; year?: number; type?: "advance" | "salary" | "ot"; unit?: string }) =>
     apiClient.get<SalaryPayment[]>("/admin/operations/salaries/payments", { params }).then((r) => r.data),
   deleteSalaryPayment: (id: string) =>
     apiClient.delete(`/admin/operations/salaries/payments/${id}`).then((r) => r.data),
+
+  setAttendance: (data: { employee_id: string; date: string; status: "present" | "absent"; unit: string }) =>
+    apiClient.post<Attendance>("/admin/operations/salaries/attendance", data).then((r) => r.data),
+  listAttendance: (params?: { month?: number; year?: number; unit?: string; date?: string; employee_id?: string }) =>
+    apiClient.get<Attendance[]>("/admin/operations/salaries/attendance", { params }).then((r) => r.data),
+  deleteAttendance: (id: string) =>
+    apiClient.delete(`/admin/operations/salaries/attendance/${id}`).then((r) => r.data),
 
   // ---- Operations: Transport ----
   createVehicle: (data: { name: string; number: string; unit: string }) =>

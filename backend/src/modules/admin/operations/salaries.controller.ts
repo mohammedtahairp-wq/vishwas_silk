@@ -3,7 +3,8 @@ import { z } from "zod";
 import * as salariesService from "./salaries.service";
 
 const employeeCategorySchema = z.enum(["sheet_machine", "ovendry", "khalla_jala", "drivers_helpers"]);
-const salaryPaymentTypeSchema = z.enum(["advance", "salary"]);
+const salaryPaymentTypeSchema = z.enum(["advance", "salary", "ot"]);
+const attendanceStatusSchema = z.enum(["present", "absent"]);
 const unitSchema = z.enum(["kolar", "sidlagatta", "ramnagar"]);
 
 const createEmployeeSchema = z.object({
@@ -106,7 +107,7 @@ export async function listSalaryPaymentsHandler(req: Request, res: Response) {
     month: month !== undefined ? monthSchema.parse(month) : undefined,
     year: year !== undefined ? yearSchema.parse(year) : undefined,
     type: salaryPaymentTypeSchema.safeParse(type).success
-      ? (type as "advance" | "salary")
+      ? (type as "advance" | "salary" | "ot")
       : undefined,
     unit: unitSchema.safeParse(unit).success ? (unit as "kolar" | "sidlagatta" | "ramnagar") : undefined,
     from: queryDate(from),
@@ -130,4 +131,42 @@ export async function salaryMonthSummaryHandler(req: Request, res: Response) {
     .parse(req.query);
   const summary = await salariesService.salaryMonthSummary(query.month, query.year, query.unit);
   res.json(summary);
+}
+
+const setAttendanceSchema = z.object({
+  employee_id: z.string().uuid(),
+  date: z
+    .string()
+    .refine((v) => !Number.isNaN(Date.parse(v)), "Invalid date")
+    .refine((v) => /^\d{4}-\d{2}-\d{2}$/.test(v), "Date must be YYYY-MM-DD"),
+  status: attendanceStatusSchema,
+  unit: unitSchema,
+});
+
+export async function setAttendanceHandler(req: Request, res: Response) {
+  const body = setAttendanceSchema.parse(req.body);
+  const attendance = await salariesService.setAttendance(req.user!.id, {
+    employeeId: body.employee_id,
+    date: new Date(body.date),
+    status: body.status,
+    unit: body.unit,
+  });
+  res.status(201).json(attendance);
+}
+
+export async function listAttendanceHandler(req: Request, res: Response) {
+  const { date, month, year, unit, employee_id } = req.query;
+  const attendance = await salariesService.listAttendance({
+    date: queryDate(date),
+    month: month !== undefined ? monthSchema.parse(month) : undefined,
+    year: year !== undefined ? yearSchema.parse(year) : undefined,
+    unit: unitSchema.safeParse(unit).success ? (unit as "kolar" | "sidlagatta" | "ramnagar") : undefined,
+    employeeId: typeof employee_id === "string" ? employee_id : undefined,
+  });
+  res.json(attendance);
+}
+
+export async function deleteAttendanceHandler(req: Request, res: Response) {
+  await salariesService.deleteAttendance(req.params.id);
+  res.status(204).send();
 }

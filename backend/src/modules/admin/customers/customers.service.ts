@@ -1,3 +1,4 @@
+import { Prisma } from "@prisma/client";
 import { prisma } from "../../../lib/prisma";
 import { BadRequestError, ConflictError, ForbiddenError, NotFoundError } from "../../../lib/errors";
 import { normalizeLoginPhone } from "../../../lib/phone";
@@ -41,55 +42,90 @@ interface SetCustomerPhoneInput {
 
 async function generateSerialNumber(city?: string | null): Promise<string> {
   const prefix = (city || "UNASSIGNED").toUpperCase().replace(/[^A-Z]/g, "").slice(0, 12);
-  const count = await prisma.customer.count({
-    where: { villageArea: city || null },
+  const existing = await prisma.customer.findMany({
+    where: { serialNumber: { startsWith: prefix } },
+    select: { serialNumber: true },
   });
-  const next = count + 1;
-  return `${prefix}${String(next).padStart(2, "0")}`;
+
+  let max = 0;
+  for (const { serialNumber } of existing) {
+    const suffix = serialNumber?.slice(prefix.length) ?? "";
+    if (/^\d+$/.test(suffix)) {
+      max = Math.max(max, Number(suffix));
+    }
+  }
+
+  let next = max + 1;
+  for (;;) {
+    const candidate = `${prefix}${String(next).padStart(2, "0")}`;
+    const taken = await prisma.customer.findFirst({
+      where: { serialNumber: candidate },
+      select: { id: true },
+    });
+    if (!taken) return candidate;
+    next += 1;
+  }
 }
 
 export async function createCustomer(input: CreateCustomerInput) {
-  const serialNumber = await generateSerialNumber(input.villageArea);
+  const phone = input.phone.trim();
+  const existingCustomer = await prisma.customer.findUnique({ where: { phone }, select: { id: true } });
+  if (existingCustomer) throw new ConflictError("A customer with that phone number already exists");
+
   const today = new Date().toISOString().slice(0, 10);
 
   // Login phone defaults to the customer's contact phone so every new
   // customer can sign in with OTP immediately.
-  const loginPhone = normalizeLoginPhone(input.loginPhone?.trim() || input.phone);
+  const loginPhone = normalizeLoginPhone(input.loginPhone?.trim() || phone);
   const existingUser = await prisma.user.findUnique({ where: { loginPhone } });
   if (existingUser) throw new ConflictError("That phone number is already in use for login");
 
-  return prisma.$transaction(async (tx) => {
-    const customer = await tx.customer.create({
-      data: {
-        serialNumber,
-        name: input.name,
-        phone: input.phone,
-        address: input.address,
-        villageArea: input.villageArea,
-        createdById: input.createdById,
-      },
-    });
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const serialNumber = await generateSerialNumber(input.villageArea);
+    try {
+      return await prisma.$transaction(async (tx) => {
+        const customer = await tx.customer.create({
+          data: {
+            serialNumber,
+            name: input.name,
+            phone,
+            address: input.address,
+            villageArea: input.villageArea,
+            createdById: input.createdById,
+          },
+        });
 
-    if (input.products && input.products.length > 0) {
-      await tx.customerProductPrice.createMany({
-        data: input.products.map((p) => ({
-          customerId: customer.id,
-          productId: p.productId,
-          pricePerKg: p.pricePerKg,
-          effectiveFrom: p.effectiveFrom ? new Date(p.effectiveFrom) : new Date(today),
-          createdById: input.createdById,
-        })),
+        if (input.products && input.products.length > 0) {
+          await tx.customerProductPrice.createMany({
+            data: input.products.map((p) => ({
+              customerId: customer.id,
+              productId: p.productId,
+              pricePerKg: p.pricePerKg,
+              effectiveFrom: p.effectiveFrom ? new Date(p.effectiveFrom) : new Date(today),
+              createdById: input.createdById,
+            })),
+          });
+        }
+
+        if (loginPhone) {
+          await tx.user.create({
+            data: { loginPhone, role: "customer", linkedId: customer.id },
+          });
+        }
+
+        return { customer, loginPhone: loginPhone ?? null };
       });
+    } catch (err) {
+      const target =
+        err instanceof Prisma.PrismaClientKnownRequestError && Array.isArray(err.meta?.target)
+          ? (err.meta.target as string[])
+          : [];
+      if (target.includes("serial_number")) continue;
+      throw err;
     }
+  }
 
-    if (loginPhone) {
-      await tx.user.create({
-        data: { loginPhone, role: "customer", linkedId: customer.id },
-      });
-    }
-
-    return { customer, loginPhone: loginPhone ?? null };
-  });
+  throw new ConflictError("Could not assign a unique serial number, please try again");
 }
 export async function listCustomers(filter: ListCustomersFilter) {
   const customers = await prisma.customer.findMany({

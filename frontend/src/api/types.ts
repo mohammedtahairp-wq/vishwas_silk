@@ -190,7 +190,7 @@ export interface Employee {
   createdAt: string;
 }
 
-export type SalaryPaymentType = "advance" | "salary";
+export type SalaryPaymentType = "advance" | "salary" | "ot";
 
 export interface SalaryPayment {
   id: string;
@@ -205,6 +205,18 @@ export interface SalaryPayment {
   employee?: { name: string; category: EmployeeCategory; unit: Unit };
 }
 
+export type AttendanceStatus = "present" | "absent";
+
+export interface Attendance {
+  id: string;
+  employeeId: string;
+  date: string;
+  status: AttendanceStatus;
+  unit: Unit;
+  createdAt: string;
+  employee?: { id: string; name: string; category: EmployeeCategory };
+}
+
 export interface SalarySummaryRow {
   employeeId: string;
   name: string;
@@ -213,6 +225,13 @@ export interface SalarySummaryRow {
   unit: Unit;
   status: "active" | "inactive";
   monthlySalary: number;
+  presentDays: number;
+  absentDays: number;
+  perDayRate: number;
+  attendanceDeduction: number;
+  salaryAfterAttendance: number;
+  otTotal: number;
+  totalEarned: number;
   advanceTotal: number;
   salaryPaidTotal: number;
   totalPaid: number;
@@ -222,11 +241,17 @@ export interface SalarySummaryRow {
 export interface SalaryMonthSummary {
   month: number;
   year: number;
+  totalDays: number;
   rows: SalarySummaryRow[];
   grandTotals: {
     monthlySalary: number;
+    attendanceDeduction: number;
+    salaryAfterAttendance: number;
+    otTotal: number;
+    totalEarned: number;
     advanceTotal: number;
     salaryPaidTotal: number;
+    totalPaid: number;
     remaining: number;
   };
 }

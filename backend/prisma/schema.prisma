@@ -39,6 +39,12 @@ enum EmployeeCategory {
 enum SalaryPaymentType {
   advance
   salary
+  ot
+}
+
+enum AttendanceStatus {
+  present
+  absent
 }
 
 enum TransportExpenseCategory {
@@ -72,6 +78,7 @@ model User {
   createdPrices       CustomerProductPrice[]
   createdTransactions Transaction[]
   createdSalaries     SalaryPayment[]        @relation("SalaryPaymentCreatedBy")
+  createdAttendance   Attendance[]           @relation("AttendanceCreatedBy")
   createdTransport    TransportExpense[]     @relation("TransportExpenseCreatedBy")
   createdMaintenance  MaintenanceExpense[]   @relation("MaintenanceExpenseCreatedBy")
   createdDieselLogs   DieselLog[]            @relation("DieselLogCreatedBy")
@@ -231,6 +238,7 @@ model Employee {
   createdAt     DateTime         @default(now()) @map("created_at")
 
   salaryPayments SalaryPayment[]
+  attendance     Attendance[]
 
   @@index([category])
   @@index([unit])
@@ -256,6 +264,24 @@ model SalaryPayment {
   @@index([employeeId, year, month])
   @@index([unit, year, month])
   @@map("salary_payments")
+}
+
+model Attendance {
+  id          String           @id @default(uuid())
+  employeeId  String           @map("employee_id")
+  date        DateTime         @map("date") @db.Date
+  status      AttendanceStatus
+  unit        Unit             @default(kolar)
+  createdById String           @map("created_by")
+  createdAt   DateTime         @default(now()) @map("created_at")
+
+  employee  Employee @relation(fields: [employeeId], references: [id])
+  createdBy User     @relation("AttendanceCreatedBy", fields: [createdById], references: [id])
+
+  @@unique([employeeId, date])
+  @@index([unit, date])
+  @@index([employeeId, date])
+  @@map("attendance")
 }
 
 model Vehicle {

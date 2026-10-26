@@ -1,6 +1,6 @@
 import { prisma } from "../../../lib/prisma";
 import { ConflictError, NotFoundError } from "../../../lib/errors";
-import type { EmployeeCategory, SalaryPaymentType, Unit } from "@prisma/client";
+import type { AttendanceStatus, EmployeeCategory, SalaryPaymentType, Unit } from "@prisma/client";
 
 interface CreateEmployeeInput {
   name: string;
@@ -137,14 +137,25 @@ export interface SalarySummaryRow {
   unit: Unit;
   status: "active" | "inactive";
   monthlySalary: number;
+  presentDays: number;
+  absentDays: number;
+  perDayRate: number;
+  attendanceDeduction: number;
+  salaryAfterAttendance: number;
+  otTotal: number;
+  totalEarned: number;
   advanceTotal: number;
   salaryPaidTotal: number;
   totalPaid: number;
   remaining: number;
 }
 
+function daysInMonth(month: number, year: number) {
+  return new Date(year, month, 0).getDate();
+}
+
 export async function salaryMonthSummary(month: number, year: number, unit?: Unit) {
-  const [employees, aggregates] = await Promise.all([
+  const [employees, aggregates, attendanceRows] = await Promise.all([
     prisma.employee.findMany({
       where: unit ? { unit } : undefined,
       orderBy: [{ category: "asc" }, { name: "asc" }],
@@ -154,19 +165,46 @@ export async function salaryMonthSummary(month: number, year: number, unit?: Uni
       where: { month, year, ...(unit ? { unit } : {}) },
       _sum: { amount: true },
     }),
+    prisma.attendance.groupBy({
+      by: ["employeeId", "status"],
+      where: {
+        unit: unit ? unit : undefined,
+        date: {
+          gte: new Date(Date.UTC(year, month - 1, 1)),
+          lt: new Date(Date.UTC(year, month, 1)),
+        },
+      },
+      _count: { _all: true },
+    }),
   ]);
 
-  const totals = new Map<string, { advance: number; salary: number }>();
+  const totals = new Map<string, { advance: number; salary: number; ot: number }>();
   for (const row of aggregates) {
-    const entry = totals.get(row.employeeId) ?? { advance: 0, salary: 0 };
+    const entry = totals.get(row.employeeId) ?? { advance: 0, salary: 0, ot: 0 };
     if (row.type === "advance") entry.advance += Number(row._sum.amount ?? 0);
+    else if (row.type === "ot") entry.ot += Number(row._sum.amount ?? 0);
     else entry.salary += Number(row._sum.amount ?? 0);
     totals.set(row.employeeId, entry);
   }
 
+  const attendanceCounts = new Map<string, { present: number; absent: number }>();
+  for (const row of attendanceRows) {
+    const entry = attendanceCounts.get(row.employeeId) ?? { present: 0, absent: 0 };
+    if (row.status === "absent") entry.absent += row._count._all;
+    else entry.present += row._count._all;
+    attendanceCounts.set(row.employeeId, entry);
+  }
+
+  const totalDays = daysInMonth(month, year);
+
   const rows: SalarySummaryRow[] = employees.map((employee) => {
-    const t = totals.get(employee.id) ?? { advance: 0, salary: 0 };
+    const t = totals.get(employee.id) ?? { advance: 0, salary: 0, ot: 0 };
+    const a = attendanceCounts.get(employee.id) ?? { present: 0, absent: 0 };
     const monthlySalary = Number(employee.monthlySalary);
+    const perDayRate = monthlySalary / totalDays;
+    const attendanceDeduction = a.absent * perDayRate;
+    const salaryAfterAttendance = monthlySalary - attendanceDeduction;
+    const totalEarned = salaryAfterAttendance + t.ot;
     const totalPaid = t.advance + t.salary;
     return {
       employeeId: employee.id,
@@ -176,22 +214,109 @@ export async function salaryMonthSummary(month: number, year: number, unit?: Uni
       unit: employee.unit,
       status: employee.status,
       monthlySalary,
+      presentDays: a.present,
+      absentDays: a.absent,
+      perDayRate,
+      attendanceDeduction,
+      salaryAfterAttendance,
+      otTotal: t.ot,
+      totalEarned,
       advanceTotal: t.advance,
       salaryPaidTotal: t.salary,
       totalPaid,
-      remaining: monthlySalary - totalPaid,
+      remaining: totalEarned - totalPaid,
     };
   });
 
   const grandTotals = rows.reduce(
     (acc, row) => ({
       monthlySalary: acc.monthlySalary + row.monthlySalary,
+      attendanceDeduction: acc.attendanceDeduction + row.attendanceDeduction,
+      salaryAfterAttendance: acc.salaryAfterAttendance + row.salaryAfterAttendance,
+      otTotal: acc.otTotal + row.otTotal,
+      totalEarned: acc.totalEarned + row.totalEarned,
       advanceTotal: acc.advanceTotal + row.advanceTotal,
       salaryPaidTotal: acc.salaryPaidTotal + row.salaryPaidTotal,
+      totalPaid: acc.totalPaid + row.totalPaid,
       remaining: acc.remaining + row.remaining,
     }),
-    { monthlySalary: 0, advanceTotal: 0, salaryPaidTotal: 0, remaining: 0 }
+    {
+      monthlySalary: 0,
+      attendanceDeduction: 0,
+      salaryAfterAttendance: 0,
+      otTotal: 0,
+      totalEarned: 0,
+      advanceTotal: 0,
+      salaryPaidTotal: 0,
+      totalPaid: 0,
+      remaining: 0,
+    }
   );
 
-  return { month, year, rows, grandTotals };
+  return { month, year, totalDays, rows, grandTotals };
+}
+
+export interface SetAttendanceInput {
+  employeeId: string;
+  date: Date;
+  status: AttendanceStatus;
+  unit: Unit;
+}
+
+export async function setAttendance(createdById: string, input: SetAttendanceInput) {
+  await getEmployeeById(input.employeeId);
+  return prisma.attendance.upsert({
+    where: {
+      employeeId_date: { employeeId: input.employeeId, date: input.date },
+    },
+    create: {
+      employeeId: input.employeeId,
+      date: input.date,
+      status: input.status,
+      unit: input.unit,
+      createdById,
+    },
+    update: {
+      status: input.status,
+      unit: input.unit,
+    },
+  });
+}
+
+export interface ListAttendanceDayFilter {
+  date?: Date;
+  month?: number;
+  year?: number;
+  unit?: Unit;
+  employeeId?: string;
+}
+
+export async function listAttendance(filter: ListAttendanceDayFilter) {
+  const dateRange =
+    filter.month !== undefined && filter.year !== undefined
+      ? {
+          gte: new Date(Date.UTC(filter.year, filter.month - 1, 1)),
+          lt: new Date(Date.UTC(filter.year, filter.month, 1)),
+        }
+      : filter.date
+      ? { gte: filter.date, lte: filter.date }
+      : undefined;
+
+  return prisma.attendance.findMany({
+    where: {
+      employeeId: filter.employeeId,
+      unit: filter.unit,
+      date: dateRange,
+    },
+    include: {
+      employee: { select: { id: true, name: true, category: true } },
+    },
+    orderBy: [{ date: "desc" }, { employeeId: "asc" }],
+  });
+}
+
+export async function deleteAttendance(id: string) {
+  const attendance = await prisma.attendance.findUnique({ where: { id } });
+  if (!attendance) throw new NotFoundError("Attendance record not found");
+  await prisma.attendance.delete({ where: { id } });
 }
