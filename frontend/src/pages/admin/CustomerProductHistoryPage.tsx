@@ -3,6 +3,7 @@ import { Link, useParams, useSearchParams } from "react-router-dom";
 import { adminApi } from "../../api/admin.api";
 import { apiErrorMessage } from "../../api/client";
 import type { Customer, PickupAdmin, Product } from "../../api/types";
+import { EditCustomerRatesModal } from "../../components/EditCustomerRatesModal";
 
 const localDate = (date: Date) => {
   const offset = date.getTimezoneOffset() * 60_000;
@@ -148,6 +149,8 @@ export function CustomerProductHistoryPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [editingRates, setEditingRates] = useState(false);
+  const [reloadToken, setReloadToken] = useState(0);
 
   useEffect(() => {
     if (!id) return;
@@ -165,7 +168,7 @@ export function CustomerProductHistoryPage() {
       })
       .catch((err) => setError(apiErrorMessage(err, "Could not load product history.")))
       .finally(() => setLoading(false));
-  }, [id, from, to]);
+  }, [id, from, to, reloadToken]);
 
   const totals = useMemo(() => ({
     kg: pickups.reduce((sum, pickup) => sum + Number(pickup.kg), 0),
@@ -256,13 +259,22 @@ export function CustomerProductHistoryPage() {
             <input type="date" value={to} min={from} onChange={(e) => updateDate("to", e.target.value)} className="filter-input w-full min-w-0" />
           </Filter>
         </div>
-        <button
-          onClick={handlePrint}
-          disabled={loading || dateRows.length === 0}
-          className="rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700 disabled:opacity-40"
-        >
-          Print
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <button
+            onClick={() => setEditingRates(true)}
+            disabled={loading || !customer}
+            className="rounded-lg border border-emerald-600 px-4 py-2.5 text-sm font-semibold text-emerald-700 shadow-sm hover:bg-emerald-50 disabled:opacity-40"
+          >
+            Edit rates
+          </button>
+          <button
+            onClick={handlePrint}
+            disabled={loading || dateRows.length === 0}
+            className="rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700 disabled:opacity-40"
+          >
+            Print
+          </button>
+        </div>
       </div>
 
       {error && <p className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p>}
@@ -355,6 +367,19 @@ export function CustomerProductHistoryPage() {
           )}
         </table>
       </div>
+
+      {editingRates && customer && (
+        <EditCustomerRatesModal
+          customerId={customer.id}
+          customerName={customer.name}
+          products={products}
+          onClose={() => setEditingRates(false)}
+          onSaved={() => {
+            setEditingRates(false);
+            setReloadToken((value) => value + 1);
+          }}
+        />
+      )}
     </div>
   );
 }

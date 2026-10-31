@@ -2,7 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { adminApi } from "../../api/admin.api";
 import { apiErrorMessage } from "../../api/client";
-import type { Customer, PickupAdmin } from "../../api/types";
+import type { Customer, PickupAdmin, Product } from "../../api/types";
+import { EditCustomerRatesModal } from "../../components/EditCustomerRatesModal";
 
 const localDate = (date: Date) => {
   const offset = date.getTimezoneOffset() * 60_000;
@@ -100,22 +101,26 @@ export function CustomerAccountsPage() {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [pickups, setPickups] = useState<PickupAdmin[]>([]);
   const [cities, setCities] = useState<string[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  const [editingRates, setEditingRates] = useState<Customer | null>(null);
+  const [reloadToken, setReloadToken] = useState(0);
 
   useEffect(() => {
     setLoading(true);
     setError(null);
-    Promise.all([adminApi.listCustomers(), adminApi.listPickups({ from, to }), adminApi.listCities()])
-      .then(([customerRows, pickupRows, cityRows]) => {
+    Promise.all([adminApi.listCustomers(), adminApi.listPickups({ from, to }), adminApi.listCities(), adminApi.listProducts()])
+      .then(([customerRows, pickupRows, cityRows, productRows]) => {
         setCustomers(customerRows);
         setPickups(pickupRows);
         setCities(cityRows.map((row) => row.name).sort((a, b) => a.localeCompare(b)));
+        setProducts(productRows);
       })
       .catch((err) => setError(apiErrorMessage(err, "Could not load customer accounts.")))
       .finally(() => setLoading(false));
-  }, [from, to]);
+  }, [from, to, reloadToken]);
 
   const rows = useMemo(() => {
     const amountByCustomer = new Map<string, number>();
@@ -199,6 +204,7 @@ export function CustomerAccountsPage() {
               <th className="px-4 py-3">Customer name</th>
               <th className="px-4 py-3">Phone number</th>
               <th className="px-4 py-3 text-right">Amount</th>
+              <th className="px-4 py-3 text-right">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -220,19 +226,37 @@ export function CustomerAccountsPage() {
                     {money(amount)}
                   </Link>
                 </td>
+                <td className="px-4 py-3 text-right">
+                  <button onClick={() => setEditingRates(customer)} className="text-emerald-600 hover:underline">
+                    Edit rates
+                  </button>
+                </td>
               </tr>
             ))}
           </tbody>
           {!loading && rows.length > 0 && (
             <tfoot>
               <tr className="border-t-2 border-emerald-600 bg-emerald-50 font-semibold">
-                <td className="px-4 py-3" colSpan={3}>TOTAL · {rows.length} customers</td>
+                <td className="px-4 py-3" colSpan={4}>TOTAL · {rows.length} customers</td>
                 <td className="px-4 py-3 text-right">{money(total)}</td>
               </tr>
             </tfoot>
           )}
         </table>
       </div>
+
+      {editingRates && (
+        <EditCustomerRatesModal
+          customerId={editingRates.id}
+          customerName={editingRates.name}
+          products={products}
+          onClose={() => setEditingRates(null)}
+          onSaved={() => {
+            setEditingRates(null);
+            setReloadToken((value) => value + 1);
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -242,5 +266,5 @@ function Filter({ label, children }: { label: string; children: React.ReactNode 
 }
 
 function Empty({ text }: { text: string }) {
-  return <tr><td colSpan={4} className="px-4 py-10 text-center text-gray-400">{text}</td></tr>;
+  return <tr><td colSpan={5} className="px-4 py-10 text-center text-gray-400">{text}</td></tr>;
 }

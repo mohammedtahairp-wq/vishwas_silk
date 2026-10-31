@@ -1,6 +1,6 @@
 {
-  "versionName": "1.10.1",
-  "versionCode": 21,
+  "versionName": "1.10.2",
+  "versionCode": 22,
   "downloadUrl": "https://vishwassilk.com/vishwassilk.apk",
-  "releaseNotes": "Customer product rate edits now apply to the whole current month."
+  "releaseNotes": "Edit customer product rates directly from Customer Accounts."
 }
