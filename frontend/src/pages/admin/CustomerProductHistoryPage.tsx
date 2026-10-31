@@ -74,23 +74,24 @@ function buildHistoryPrintHtml(opts: {
 <meta charset="utf-8" />
 <title>${escapeHtml(customer?.name || "Customer Product History")}</title>
 <style>
-  @page { size: A4 landscape; margin: 12mm; }
+  @page { size: A4 landscape; margin: 6mm; }
   * { box-sizing: border-box; }
-  body { margin: 0; font-family: "Segoe UI", Arial, sans-serif; color: #111827; }
-  .report-header { background: #065f46; color: #fff; padding: 16px 22px; }
-  .report-header .logo { display: block; height: 48px; width: auto; margin-bottom: 10px; }
-  .report-header h1 { margin: 0; font-size: 20px; letter-spacing: 0.3px; }
-  .report-header p { margin: 4px 0 0; font-size: 12px; opacity: 0.9; }
-  .meta { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px; padding: 10px 22px; background: #f3f4f6; font-size: 12px; }
-  table { width: calc(100% - 44px); margin: 16px 22px 0; border-collapse: collapse; font-size: 12px; }
-  th, td { border: 1px solid #d1d5db; padding: 6px 9px; text-align: left; }
-  th { background: #065f46; color: #fff; font-size: 11px; text-transform: uppercase; letter-spacing: 0.4px; }
+  body { margin: 0; font-family: "Segoe UI", Arial, sans-serif; color: #111827; font-size: 9px; }
+  .report-header { background: #065f46; color: #fff; padding: 6px 12px; page-break-inside: avoid; }
+  .report-header .logo { display: block; height: 28px; width: auto; margin-bottom: 4px; }
+  .report-header h1 { margin: 0; font-size: 14px; letter-spacing: 0.3px; }
+  .report-header p { margin: 2px 0 0; font-size: 9px; opacity: 0.9; }
+  .meta { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px; padding: 3px 12px; background: #f3f4f6; font-size: 9px; page-break-inside: avoid; }
+  table { width: calc(100% - 24px); margin: 5px 12px 0; border-collapse: collapse; font-size: 8.5px; page-break-inside: avoid; }
+  th, td { border: 1px solid #d1d5db; padding: 2px 5px; text-align: left; }
+  th { background: #065f46; color: #fff; font-size: 8px; text-transform: uppercase; letter-spacing: 0.4px; }
   td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
   tbody tr:nth-child(even) td { background: #f9fafb; }
+  tbody tr { page-break-inside: avoid; }
   tr.total td { background: #d1fae5; font-weight: 700; }
-  tr.grand td { background: #d1fae5; font-weight: 700; font-size: 13px; }
+  tr.grand td { background: #d1fae5; font-weight: 700; font-size: 9px; }
   tr.rate td, tr.amount td { background: #ecfdf5; font-weight: 500; }
-  .footer { margin: 16px 22px; font-size: 11px; color: #6b7280; }
+  .footer { margin: 4px 12px; font-size: 8px; color: #6b7280; page-break-inside: avoid; }
 </style>
 </head>
 <body>
