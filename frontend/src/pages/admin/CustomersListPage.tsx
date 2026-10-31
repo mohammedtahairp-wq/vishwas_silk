@@ -450,6 +450,7 @@ function EditCustomerModal({ customer, cities, products, onClose, onSaved }: { c
             <label className="text-xs font-semibold text-gray-700">Products &amp; Rates</label>
             <button type="button" onClick={() => setProductPrices([...productPrices, { productId: "", pricePerKg: "" }])} className="text-xs text-emerald-600 hover:underline">+ Add product</button>
           </div>
+          <p className="mb-2 text-xs text-gray-400">Rate changes apply to the whole current month.</p>
           {!loadedPrices && <p className="text-xs text-gray-400">Loading prices...</p>}
           {loadedPrices && productPrices.length === 0 && <p className="text-xs text-gray-400">No product rates set.</p>}
           {productPrices.map((row, idx) => (

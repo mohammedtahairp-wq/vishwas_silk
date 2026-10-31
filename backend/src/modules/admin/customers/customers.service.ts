@@ -40,6 +40,19 @@ interface SetCustomerPhoneInput {
   loginPhone: string;
 }
 
+/**
+ * Product rates edited from the Customers screen apply to the whole current
+ * calendar month, not just from the day of the edit. Editing on 31-10-2026
+ * therefore sets effective_from to 2026-10-01.
+ */
+function currentMonthStart(date = new Date()): Date {
+  return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), 1));
+}
+
+function nextMonthStart(date = new Date()): Date {
+  return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + 1, 1));
+}
+
 async function generateSerialNumber(city?: string | null): Promise<string> {
   const prefix = (city || "UNASSIGNED").toUpperCase().replace(/[^A-Z]/g, "").slice(0, 12);
   const existing = await prisma.customer.findMany({
@@ -72,7 +85,7 @@ export async function createCustomer(input: CreateCustomerInput) {
   const existingCustomer = await prisma.customer.findUnique({ where: { phone }, select: { id: true } });
   if (existingCustomer) throw new ConflictError("A customer with that phone number already exists");
 
-  const today = new Date().toISOString().slice(0, 10);
+  const defaultEffectiveFrom = currentMonthStart();
 
   // Login phone defaults to the customer's contact phone so every new
   // customer can sign in with OTP immediately.
@@ -101,7 +114,7 @@ export async function createCustomer(input: CreateCustomerInput) {
               customerId: customer.id,
               productId: p.productId,
               pricePerKg: p.pricePerKg,
-              effectiveFrom: p.effectiveFrom ? new Date(p.effectiveFrom) : new Date(today),
+              effectiveFrom: p.effectiveFrom ? new Date(p.effectiveFrom) : defaultEffectiveFrom,
               createdById: input.createdById,
             })),
           });
@@ -199,7 +212,7 @@ export async function updateCustomer(id: string, input: UpdateCustomerInput) {
     const customer = await tx.customer.update({ where: { id }, data: fields });
 
     if (products) {
-      const today = new Date().toISOString().slice(0, 10);
+      const defaultEffectiveFrom = currentMonthStart();
       await tx.customerProductPrice.deleteMany({ where: { customerId: id } });
       if (products.length > 0) {
         await tx.customerProductPrice.createMany({
@@ -207,10 +220,37 @@ export async function updateCustomer(id: string, input: UpdateCustomerInput) {
             customerId: id,
             productId: p.productId,
             pricePerKg: p.pricePerKg,
-            effectiveFrom: p.effectiveFrom ? new Date(p.effectiveFrom) : new Date(today),
+            effectiveFrom: p.effectiveFrom ? new Date(p.effectiveFrom) : defaultEffectiveFrom,
             createdById: input.createdById ?? customer.createdById,
           })),
         });
+
+        // Re-price pending pickups from the current month so the edited rate
+        // truly applies to the whole month. Settled/paid pickups are left as
+        // they are because their amounts are already recorded in settlements.
+        const ratesByProduct = new Map(products.map((p) => [p.productId, Number(p.pricePerKg)]));
+        const monthStart = currentMonthStart();
+        const monthEnd = nextMonthStart();
+        const monthPickups = await tx.pickup.findMany({
+          where: {
+            customerId: id,
+            status: "pending",
+            productId: { in: products.map((p) => p.productId) },
+            pickupDate: { gte: monthStart, lt: monthEnd },
+          },
+          select: { id: true, productId: true, kg: true },
+        });
+        for (const pickup of monthPickups) {
+          const rate = ratesByProduct.get(pickup.productId);
+          if (rate === undefined) continue;
+          await tx.pickup.update({
+            where: { id: pickup.id },
+            data: {
+              pricePerKgSnapshot: rate,
+              amount: Number((Number(pickup.kg) * rate).toFixed(2)),
+            },
+          });
+        }
       }
     }
 
