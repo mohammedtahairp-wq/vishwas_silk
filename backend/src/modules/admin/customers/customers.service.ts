@@ -45,12 +45,21 @@ interface SetCustomerPhoneInput {
  * calendar month, not just from the day of the edit. Editing on 31-10-2026
  * therefore sets effective_from to 2026-10-01.
  */
+function indiaYearMonth(date = new Date()): { year: number; month: number } {
+  // The business operates on IST, while the server runs in UTC. Shift before
+  // reading the month so edits just after midnight IST land on the right month.
+  const ist = new Date(date.getTime() + 5.5 * 60 * 60 * 1000);
+  return { year: ist.getUTCFullYear(), month: ist.getUTCMonth() };
+}
+
 function currentMonthStart(date = new Date()): Date {
-  return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), 1));
+  const { year, month } = indiaYearMonth(date);
+  return new Date(Date.UTC(year, month, 1));
 }
 
 function nextMonthStart(date = new Date()): Date {
-  return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + 1, 1));
+  const { year, month } = indiaYearMonth(date);
+  return new Date(Date.UTC(year, month + 1, 1));
 }
 
 async function generateSerialNumber(city?: string | null): Promise<string> {
