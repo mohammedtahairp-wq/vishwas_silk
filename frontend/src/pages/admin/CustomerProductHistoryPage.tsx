@@ -74,27 +74,29 @@ function buildHistoryPrintHtml(opts: {
 <meta charset="utf-8" />
 <title>${escapeHtml(customer?.name || "Customer Product History")}</title>
 <style>
-  @page { size: A4 landscape; margin: 6mm; }
+  @page { size: A4 portrait; margin: 8mm; }
   * { box-sizing: border-box; }
-  body { margin: 0; font-family: "Segoe UI", Arial, sans-serif; color: #111827; font-size: 9px; }
-  .report-header { background: #065f46; color: #fff; padding: 6px 12px; page-break-inside: avoid; }
-  .report-header .logo { display: block; height: 28px; width: auto; margin-bottom: 4px; }
-  .report-header h1 { margin: 0; font-size: 14px; letter-spacing: 0.3px; }
-  .report-header p { margin: 2px 0 0; font-size: 9px; opacity: 0.9; }
-  .meta { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px; padding: 3px 12px; background: #f3f4f6; font-size: 9px; page-break-inside: avoid; }
-  table { width: calc(100% - 24px); margin: 5px 12px 0; border-collapse: collapse; font-size: 8.5px; page-break-inside: avoid; }
-  th, td { border: 1px solid #d1d5db; padding: 2px 5px; text-align: left; }
-  th { background: #065f46; color: #fff; font-size: 8px; text-transform: uppercase; letter-spacing: 0.4px; }
+  body { margin: 0; font-family: "Segoe UI", Arial, sans-serif; color: #111827; font-size: 11px; }
+  #sheet { width: 194mm; }
+  .report-header { background: #065f46; color: #fff; padding: 10px 16px; page-break-inside: avoid; }
+  .report-header .logo { display: block; height: 40px; width: auto; margin-bottom: 6px; }
+  .report-header h1 { margin: 0; font-size: 18px; letter-spacing: 0.3px; }
+  .report-header p { margin: 3px 0 0; font-size: 11px; opacity: 0.9; }
+  .meta { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px; padding: 6px 16px; background: #f3f4f6; font-size: 11px; page-break-inside: avoid; }
+  table { width: 100%; margin: 10px 0 0; border-collapse: collapse; font-size: 10.5px; table-layout: fixed; }
+  th, td { border: 1px solid #d1d5db; padding: 4px 7px; text-align: left; word-break: break-word; }
+  th { background: #065f46; color: #fff; font-size: 10px; text-transform: uppercase; letter-spacing: 0.3px; }
   td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
   tbody tr:nth-child(even) td { background: #f9fafb; }
   tbody tr { page-break-inside: avoid; }
   tr.total td { background: #d1fae5; font-weight: 700; }
-  tr.grand td { background: #d1fae5; font-weight: 700; font-size: 9px; }
+  tr.grand td { background: #d1fae5; font-weight: 700; font-size: 11px; }
   tr.rate td, tr.amount td { background: #ecfdf5; font-weight: 500; }
-  .footer { margin: 4px 12px; font-size: 8px; color: #6b7280; page-break-inside: avoid; }
+  .footer { margin: 8px 0 0; font-size: 9px; color: #6b7280; page-break-inside: avoid; }
 </style>
 </head>
 <body>
+  <div id="sheet">
   <div class="report-header">
     <img class="logo" src="https://manage.vishwassilk.com/logo.jpeg" alt="VISHWAS SILK" />
     <h1>VISHWAS SILK</h1>
@@ -135,6 +137,26 @@ function buildHistoryPrintHtml(opts: {
     </tfoot>
   </table>
   <p class="footer">Printed from VISHWAS SILK · https://manage.vishwassilk.com</p>
+  </div>
+  <script>
+    (function () {
+      function fitToOnePage() {
+        var sheet = document.getElementById("sheet");
+        if (!sheet) return;
+        var mmToPx = 96 / 25.4;
+        var pageWidth = (210 - 16) * mmToPx;
+        var pageHeight = (297 - 16) * mmToPx - 6;
+        sheet.style.zoom = "1";
+        var width = sheet.scrollWidth;
+        var height = sheet.scrollHeight;
+        var scale = Math.min(1, pageWidth / width, pageHeight / height);
+        if (!isFinite(scale) || scale <= 0) scale = 1;
+        sheet.style.zoom = String(scale);
+      }
+      window.addEventListener("load", fitToOnePage);
+      window.addEventListener("beforeprint", fitToOnePage);
+    })();
+  </script>
 </body>
 </html>`;
 }

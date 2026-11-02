@@ -1,6 +1,6 @@
 {
-  "versionName": "1.10.3",
-  "versionCode": 23,
+  "versionName": "1.10.4",
+  "versionCode": 24,
   "downloadUrl": "https://vishwassilk.com/vishwassilk.apk",
-  "releaseNotes": "Customer account print now fits the full month on one page."
+  "releaseNotes": "Customer account print is now portrait, larger and fits on one page."
 }
