@@ -250,6 +250,7 @@ export function CustomerAccountsPage() {
           customerId={editingRates.id}
           customerName={editingRates.name}
           products={products}
+          month={from}
           onClose={() => setEditingRates(null)}
           onSaved={() => {
             setEditingRates(null);

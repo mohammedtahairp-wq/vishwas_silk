@@ -57,11 +57,6 @@ function currentMonthStart(date = new Date()): Date {
   return new Date(Date.UTC(year, month, 1));
 }
 
-function nextMonthStart(date = new Date()): Date {
-  const { year, month } = indiaYearMonth(date);
-  return new Date(Date.UTC(year, month + 1, 1));
-}
-
 async function generateSerialNumber(city?: string | null): Promise<string> {
   const prefix = (city || "UNASSIGNED").toUpperCase().replace(/[^A-Z]/g, "").slice(0, 12);
   const existing = await prisma.customer.findMany({
@@ -234,22 +229,28 @@ export async function updateCustomer(id: string, input: UpdateCustomerInput) {
           })),
         });
 
-        // Re-price pending pickups from the current month so the edited rate
-        // truly applies to the whole month. Settled/paid pickups are left as
-        // they are because their amounts are already recorded in settlements.
+        // Re-price pending pickups from the edited month onwards so the edited
+        // rate truly applies to the whole selected month — even when editing a
+        // past month (e.g. October while the current month is November). The
+        // latest edit then continues to apply to later months as well.
+        // Settled/paid pickups are left as they are because their amounts are
+        // already recorded in settlements.
         const ratesByProduct = new Map(products.map((p) => [p.productId, Number(p.pricePerKg)]));
-        const monthStart = currentMonthStart();
-        const monthEnd = nextMonthStart();
-        const monthPickups = await tx.pickup.findMany({
+        const repriceFrom =
+          products.reduce<Date | null>((earliest, p) => {
+            const candidate = p.effectiveFrom ? new Date(p.effectiveFrom) : defaultEffectiveFrom;
+            return !earliest || candidate < earliest ? candidate : earliest;
+          }, null) ?? defaultEffectiveFrom;
+        const pickupsToReprice = await tx.pickup.findMany({
           where: {
             customerId: id,
             status: "pending",
             productId: { in: products.map((p) => p.productId) },
-            pickupDate: { gte: monthStart, lt: monthEnd },
+            pickupDate: { gte: repriceFrom },
           },
           select: { id: true, productId: true, kg: true },
         });
-        for (const pickup of monthPickups) {
+        for (const pickup of pickupsToReprice) {
           const rate = ratesByProduct.get(pickup.productId);
           if (rate === undefined) continue;
           await tx.pickup.update({

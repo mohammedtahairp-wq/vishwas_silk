@@ -5,19 +5,33 @@ import { apiErrorMessage } from "../api/client";
 import type { Product } from "../api/types";
 import { Modal } from "./Modal";
 
+function monthStart(value?: string) {
+  const base = value ? new Date(`${value}T00:00:00`) : new Date();
+  const year = base.getFullYear();
+  const month = String(base.getMonth() + 1).padStart(2, "0");
+  return `${year}-${month}-01`;
+}
+
 export function EditCustomerRatesModal({
   customerId,
   customerName,
   products,
+  month,
   onClose,
   onSaved,
 }: {
   customerId: string;
   customerName: string;
   products: Product[];
+  month?: string;
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const effectiveFrom = monthStart(month);
+  const monthLabel = new Date(`${effectiveFrom}T00:00:00`).toLocaleDateString("en-IN", {
+    month: "long",
+    year: "numeric",
+  });
   const [productPrices, setProductPrices] = useState<{ productId: string; pricePerKg: string }[]>([]);
   const [loadedPrices, setLoadedPrices] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -46,6 +60,7 @@ export function EditCustomerRatesModal({
         products: validProducts.map((row) => ({
           productId: row.productId,
           pricePerKg: Number(row.pricePerKg),
+          effectiveFrom,
         })),
       });
       onSaved();
@@ -58,7 +73,9 @@ export function EditCustomerRatesModal({
   return (
     <Modal title={`Edit rates — ${customerName}`} onClose={onClose}>
       <form onSubmit={save} className="space-y-3">
-        <p className="text-xs text-gray-500">Rate changes apply to the whole current month.</p>
+        <p className="text-xs text-gray-500">
+          Rate changes apply to the whole of {monthLabel} and continue to later months.
+        </p>
         <div className="flex items-center justify-between">
           <label className="text-xs font-semibold text-gray-700">Products &amp; Rates</label>
           <button

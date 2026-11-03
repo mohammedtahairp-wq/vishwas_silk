@@ -396,6 +396,7 @@ export function CustomerProductHistoryPage() {
           customerId={customer.id}
           customerName={customer.name}
           products={products}
+          month={from}
           onClose={() => setEditingRates(false)}
           onSaved={() => {
             setEditingRates(false);

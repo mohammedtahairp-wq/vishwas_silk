@@ -1,6 +1,6 @@
 {
-  "versionName": "1.10.4",
-  "versionCode": 24,
+  "versionName": "1.10.5",
+  "versionCode": 25,
   "downloadUrl": "https://vishwassilk.com/vishwassilk.apk",
-  "releaseNotes": "Customer account print is now portrait, larger and fits on one page."
+  "releaseNotes": "Edit customer rates for the month selected in the filter; the latest edit continues to later months."
 }
